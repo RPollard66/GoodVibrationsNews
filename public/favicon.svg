@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Shining sun icon">
+  <defs>
+    <radialGradient id="sunCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fffbd6" />
+      <stop offset="55%" stop-color="#ffd666" />
+      <stop offset="100%" stop-color="#ff9f1a" />
+    </radialGradient>
+    <radialGradient id="sky" cx="50%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#1e3668" />
+      <stop offset="100%" stop-color="#0a1227" />
+    </radialGradient>
+  </defs>
+  <rect width="256" height="256" rx="52" fill="url(#sky)" />
+  <g fill="#ffd666" opacity="0.95" transform="translate(128 128)">
+    <rect x="-7" y="-120" width="14" height="34" rx="7" />
+    <rect x="-7" y="86" width="14" height="34" rx="7" />
+    <rect x="86" y="-7" width="34" height="14" rx="7" />
+    <rect x="-120" y="-7" width="34" height="14" rx="7" />
+    <rect x="62" y="-92" width="14" height="34" rx="7" transform="rotate(45)" />
+    <rect x="-76" y="58" width="14" height="34" rx="7" transform="rotate(45)" />
+    <rect x="58" y="62" width="14" height="34" rx="7" transform="rotate(-45)" />
+    <rect x="-92" y="-76" width="14" height="34" rx="7" transform="rotate(-45)" />
+  </g>
+  <circle cx="128" cy="128" r="58" fill="url(#sunCore)" />
+  <circle cx="128" cy="128" r="20" fill="#fff9bf" opacity="0.75" />
+</svg>

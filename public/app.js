@@ -8,6 +8,8 @@ const state = {
 
 const articleContainer = document.getElementById("articles");
 const statusLine = document.getElementById("statusLine");
+const newsView = document.getElementById("newsView");
+const settingsView = document.getElementById("settingsView");
 const lastUpdatedNode = document.getElementById("lastUpdated");
 const nextRefreshNode = document.getElementById("nextRefresh");
 const feedStatsNode = document.getElementById("feedStats");
@@ -21,6 +23,17 @@ const settingFields = [
   "negativePenaltyWeight",
   "positivityThreshold"
 ];
+
+function setActiveView(viewName) {
+  const showNews = viewName === "news";
+
+  newsView.classList.toggle("is-hidden", !showNews);
+  settingsView.classList.toggle("is-hidden", showNews);
+
+  document.querySelectorAll(".tab-chip").forEach((chip) => {
+    chip.classList.toggle("active", chip.dataset.view === viewName);
+  });
+}
 
 function setSettingsUI(settings) {
   if (!settings) return;
@@ -193,6 +206,12 @@ document.querySelectorAll(".filter-chip").forEach((chip) => {
   });
 });
 
+document.querySelectorAll(".tab-chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    setActiveView(chip.dataset.view);
+  });
+});
+
 refreshBtn.addEventListener("click", async () => {
   refreshBtn.disabled = true;
   try {
@@ -231,3 +250,5 @@ loadArticles(false).catch((error) => {
   console.error(error);
   statusLine.textContent = "Could not load feeds. Check your internet and server logs.";
 });
+
+setActiveView("news");

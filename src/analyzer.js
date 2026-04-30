@@ -3,10 +3,10 @@ const Sentiment = require("sentiment");
 const sentiment = new Sentiment();
 
 const DEFAULT_TUNING = {
-  aiWeight: 1.8,
-  positivityWeight: 1,
-  negativePenaltyWeight: 1,
-  positivityThreshold: 0.05
+  aiWeight: 2.5,
+  positivityWeight: 2.2,
+  negativePenaltyWeight: 3,
+  positivityThreshold: 0.45
 };
 
 const AI_KEYWORDS = [
@@ -35,7 +35,45 @@ const TECH_KEYWORDS = [
   "cybersecurity",
   "robot",
   "app",
-  "gadget"
+  "gadget",
+  "raspberry pi",
+  "arduino",
+  "meshtastic",
+  "flipper zero",
+  "maker",
+  "electronics",
+  "embedded",
+  "microcontroller",
+  "pcb",
+  "lora",
+  "ham radio",
+  "firmware",
+  "iot",
+  "solder",
+  "sdr",
+  "fpga",
+  "mathematics",
+  "math"
+];
+
+const MAKER_KEYWORDS = [
+  "raspberry pi",
+  "arduino",
+  "meshtastic",
+  "flipper zero",
+  "maker",
+  "hobby electronics",
+  "electronics",
+  "embedded",
+  "microcontroller",
+  "pcb",
+  "lora",
+  "ham radio",
+  "firmware",
+  "iot",
+  "solder",
+  "sdr",
+  "fpga"
 ];
 
 const GAMING_KEYWORDS = [
@@ -86,10 +124,68 @@ const NEGATIVE_KEYWORDS = [
   "collapse"
 ];
 
+const POLITICS_KEYWORDS = [
+  "election",
+  "elections",
+  "senate",
+  "congress",
+  "parliament",
+  "lawmaker",
+  "lawmakers",
+  "prime minister",
+  "minister",
+  "president",
+  "campaign",
+  "democrat",
+  "republican",
+  "gop",
+  "liberal",
+  "conservative",
+  "left wing",
+  "right wing",
+  "maga",
+  "trump",
+  "biden",
+  "putin",
+  "xi jinping",
+  "netanyahu",
+  "politics",
+  "political",
+  "geopolitics",
+  "government",
+  "governor",
+  "policy",
+  "policies",
+  "diplomat",
+  "diplomacy",
+  "whitehall",
+  "white house",
+  "kremlin",
+  "downing street",
+  "supreme court",
+  "sanction",
+  "sanctions",
+  "foreign ministry",
+  "european union",
+  "opec"
+];
+
+function normalizeForKeywordMatch(value) {
+  return ` ${String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()} `;
+}
+
 function countKeywordHits(text, keywords) {
-  const lower = text.toLowerCase();
+  const normalizedText = normalizeForKeywordMatch(text);
+
   return keywords.reduce((count, word) => {
-    return count + (lower.includes(word) ? 1 : 0);
+    const normalizedWord = normalizeForKeywordMatch(word).trim();
+    if (!normalizedWord) return count;
+
+    return count + (normalizedText.includes(` ${normalizedWord} `) ? 1 : 0);
   }, 0);
 }
 
@@ -102,6 +198,11 @@ function detectCategory(text) {
   const gamingHits = countKeywordHits(text, GAMING_KEYWORDS);
   if (gamingHits > 0) {
     return "gaming";
+  }
+
+  const makerHits = countKeywordHits(text, MAKER_KEYWORDS);
+  if (makerHits > 0) {
+    return "maker";
   }
 
   const techHits = countKeywordHits(text, TECH_KEYWORDS);
@@ -138,8 +239,13 @@ function scoreArticle(article, tuning) {
   const sentimentResult = sentiment.analyze(combined);
 
   const aiHits = countKeywordHits(combined, AI_KEYWORDS);
+  const politicsHits = countKeywordHits(combined, POLITICS_KEYWORDS);
   const positiveHits = countKeywordHits(combined, POSITIVE_KEYWORDS);
   const negativeHits = countKeywordHits(combined, NEGATIVE_KEYWORDS);
+  const hasPolitics = politicsHits > 0;
+
+  // Hard floor: discard content that trends negative even before tuning.
+  const isHardNegative = sentimentResult.comparative < -0.02 || negativeHits > 0;
 
   const positivityScore =
     sentimentResult.comparative * tuning.positivityWeight +
@@ -152,6 +258,9 @@ function scoreArticle(article, tuning) {
     ...article,
     category,
     aiScore: aiHits,
+    politicsHits,
+    hasPolitics,
+    isHardNegative,
     rankScore,
     positivityScore,
     isPositive: positivityScore > tuning.positivityThreshold,
@@ -164,6 +273,8 @@ function analyzeAndFilterArticles(articles, tuningInput = DEFAULT_TUNING) {
 
   return articles
     .map((article) => scoreArticle(article, tuning))
+    .filter((article) => !article.hasPolitics)
+    .filter((article) => !article.isHardNegative)
     .filter((article) => article.isPositive)
     .sort((a, b) => {
       if (b.rankScore !== a.rankScore) return b.rankScore - a.rankScore;

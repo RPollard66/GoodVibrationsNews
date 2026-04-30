@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Good Vibrations News</title>
+    <meta name="theme-color" content="#0b1221" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -15,12 +21,40 @@
 
     <main class="app-shell">
       <header class="hero">
-        <p class="eyebrow">POSITIVE SIGNALS ONLY</p>
+        <div class="hero-topline">
+          <p class="eyebrow">POSITIVE SIGNALS ONLY</p>
+          <span class="strict-badge">Strict Mode: No Politics / No Negative</span>
+        </div>
         <h1>Good Vibrations News</h1>
         <p class="subtitle">
           AI-first uplifting headlines across world, tech, and gaming RSS feeds.
         </p>
-        <div class="meta-grid">
+      </header>
+
+      <section class="view-tabs" aria-label="App views">
+        <button class="tab-chip active" data-view="news" type="button">News</button>
+        <button class="tab-chip" data-view="settings" type="button">Settings</button>
+      </section>
+
+      <section id="newsView" class="app-view">
+        <section class="filters" aria-label="Category filters">
+          <button class="filter-chip active" data-filter="all">All</button>
+          <button class="filter-chip" data-filter="ai">AI</button>
+          <button class="filter-chip" data-filter="maker">Maker/Electronics</button>
+          <button class="filter-chip" data-filter="tech">Tech</button>
+          <button class="filter-chip" data-filter="gaming">Gaming</button>
+          <button class="filter-chip" data-filter="general">Uplifting</button>
+        </section>
+
+        <section>
+          <h2 class="section-title">Top Stories</h2>
+          <div id="statusLine" class="status-line">Fetching positive stories...</div>
+          <div id="articles" class="card-grid"></div>
+        </section>
+      </section>
+
+      <section id="settingsView" class="app-view is-hidden">
+        <section class="meta-grid">
           <div class="meta-box">
             <span>Last Updated</span>
             <strong id="lastUpdated">Loading...</strong>
@@ -30,50 +64,36 @@
             <strong id="nextRefresh">Calculating...</strong>
           </div>
           <button id="refreshBtn" class="refresh-btn" type="button">Refresh Now</button>
-        </div>
-      </header>
+        </section>
 
-      <section class="filters" aria-label="Category filters">
-        <button class="filter-chip active" data-filter="all">All</button>
-        <button class="filter-chip" data-filter="ai">AI Priority</button>
-        <button class="filter-chip" data-filter="tech">Tech</button>
-        <button class="filter-chip" data-filter="gaming">Gaming</button>
-        <button class="filter-chip" data-filter="general">Uplifting</button>
-      </section>
+        <section class="controls-panel">
+          <h2 class="section-title">Scoring Controls</h2>
+          <p class="controls-subtitle">Tune how strongly AI and sentiment shape your story feed.</p>
+          <form id="settingsForm" class="controls-grid">
+            <label class="control-card">
+              <span>AI Weight <strong id="aiWeightValue">2.5</strong></span>
+              <input id="aiWeight" name="aiWeight" type="range" min="0" max="5" step="0.1" value="2.5" />
+            </label>
+            <label class="control-card">
+              <span>Positivity Weight <strong id="positivityWeightValue">2.2</strong></span>
+              <input id="positivityWeight" name="positivityWeight" type="range" min="0.2" max="3" step="0.1" value="2.2" />
+            </label>
+            <label class="control-card">
+              <span>Negative Penalty <strong id="negativePenaltyWeightValue">3.0</strong></span>
+              <input id="negativePenaltyWeight" name="negativePenaltyWeight" type="range" min="0.2" max="3" step="0.1" value="3" />
+            </label>
+            <label class="control-card">
+              <span>Positivity Threshold <strong id="positivityThresholdValue">0.45</strong></span>
+              <input id="positivityThreshold" name="positivityThreshold" type="range" min="-0.5" max="1.5" step="0.01" value="0.45" />
+            </label>
+          </form>
+          <button id="saveSettingsBtn" class="refresh-btn settings-btn" type="button">Save & Recompute</button>
+        </section>
 
-      <section class="controls-panel">
-        <h2 class="section-title">Scoring Controls</h2>
-        <p class="controls-subtitle">Tune how strongly AI and sentiment shape your story feed.</p>
-        <form id="settingsForm" class="controls-grid">
-          <label class="control-card">
-            <span>AI Weight <strong id="aiWeightValue">1.8</strong></span>
-            <input id="aiWeight" name="aiWeight" type="range" min="0" max="5" step="0.1" value="1.8" />
-          </label>
-          <label class="control-card">
-            <span>Positivity Weight <strong id="positivityWeightValue">1.0</strong></span>
-            <input id="positivityWeight" name="positivityWeight" type="range" min="0.2" max="3" step="0.1" value="1" />
-          </label>
-          <label class="control-card">
-            <span>Negative Penalty <strong id="negativePenaltyWeightValue">1.0</strong></span>
-            <input id="negativePenaltyWeight" name="negativePenaltyWeight" type="range" min="0.2" max="3" step="0.1" value="1" />
-          </label>
-          <label class="control-card">
-            <span>Positivity Threshold <strong id="positivityThresholdValue">0.05</strong></span>
-            <input id="positivityThreshold" name="positivityThreshold" type="range" min="-0.5" max="1.5" step="0.01" value="0.05" />
-          </label>
-        </form>
-        <button id="saveSettingsBtn" class="refresh-btn settings-btn" type="button">Save & Recompute</button>
-      </section>
-
-      <section>
-        <h2 class="section-title">Top Stories</h2>
-        <div id="statusLine" class="status-line">Fetching positive stories...</div>
-        <div id="articles" class="card-grid"></div>
-      </section>
-
-      <section>
-        <h2 class="section-title">Feed Health</h2>
-        <div id="feedStats" class="stats-grid"></div>
+        <section>
+          <h2 class="section-title">Feed Health</h2>
+          <div id="feedStats" class="stats-grid"></div>
+        </section>
       </section>
     </main>
 
