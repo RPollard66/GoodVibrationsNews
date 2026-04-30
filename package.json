@@ -1,0 +1,21 @@
+{
+  "name": "good-vibrations-news",
+  "version": "1.0.0",
+  "description": "Local positive news aggregator with AI-prioritized RSS filtering",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "dayjs": "^1.11.13",
+    "express": "^4.21.2",
+    "rss-parser": "^3.13.0",
+    "sentiment": "^5.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
