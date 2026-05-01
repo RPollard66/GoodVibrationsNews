@@ -195,14 +195,15 @@ function detectCategory(text) {
     return "ai";
   }
 
-  const gamingHits = countKeywordHits(text, GAMING_KEYWORDS);
-  if (gamingHits > 0) {
-    return "gaming";
-  }
-
+  // Prefer maker classification over gaming when both are present.
   const makerHits = countKeywordHits(text, MAKER_KEYWORDS);
   if (makerHits > 0) {
     return "maker";
+  }
+
+  const gamingHits = countKeywordHits(text, GAMING_KEYWORDS);
+  if (gamingHits > 0) {
+    return "gaming";
   }
 
   const techHits = countKeywordHits(text, TECH_KEYWORDS);
