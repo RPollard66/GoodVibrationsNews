@@ -23,7 +23,6 @@ const FEEDS = [
   { label: "WIRED", url: "https://www.wired.com/feed/rss" },
   { label: "Phys.org", url: "https://phys.org/rss-feed/" },
   { label: "Quanta Magazine", url: "https://www.quantamagazine.org/feed/" },
-  { label: "Raspberry Pi", url: "https://www.raspberrypi.com/feed/" },
   { label: "Arduino", url: "https://blog.arduino.cc/feed/" },
   { label: "Hackaday", url: "https://hackaday.com/blog/feed/" },
   { label: "Adafruit", url: "https://blog.adafruit.com/feed/" },
@@ -37,7 +36,32 @@ const FEEDS = [
   { label: "GameSpot", url: "https://www.gamespot.com/feeds/mashup/" },
   { label: "Eurogamer", url: "https://www.eurogamer.net/feed" },
   { label: "Good News Network", url: "https://www.goodnewsnetwork.org/feed/" },
-  { label: "Positive News", url: "https://www.positive.news/feed/" }
+  { label: "Positive News", url: "https://www.positive.news/feed/" },
+  // Raspberry Pi & Maker-specific feeds
+  { label: "Raspberry Pi Blog", url: "https://www.raspberrypi.org/blog/feed/" },
+  { label: "Raspberry Pi News", url: "https://www.raspberrypi.com/news/feed/" },
+  { label: "Jeff Geerling Blog", url: "https://www.jeffgeerling.com/blog.xml" },
+  { label: "The Pi Hut", url: "https://thepihut.com/blogs/raspberry-pi-roundup.atom" },
+  { label: "Hackaday Raspberry Pi", url: "https://hackaday.com/category/raspberry-pi-2/feed/" },
+  { label: "pi3g.com Blog", url: "https://pi3g.com/feed/" },
+  { label: "Pi My Life Up", url: "https://pimylifeup.com/category/projects/feed/" },
+  { label: "RaspberryTips", url: "https://raspberrytips.com/feed/" },
+  { label: "Alex Ellis' Blog", url: "https://blog.alexellis.io/rss/" },
+  { label: "peppe8o", url: "https://peppe8o.com/feed/" },
+  { label: "Stephen Smith Raspberry Pi", url: "https://smist08.wordpress.com/tag/raspberry-pi/feed/" },
+  { label: "Raspberry Pi Spy", url: "https://www.raspberrypi-spy.co.uk/feed/" },
+  { label: "Pimoroni", url: "https://blog.pimoroni.com/rss/" },
+  { label: "Raspberry PiPod Blog", url: "https://www.recantha.co.uk/blog/?feed=rss2" },
+  { label: "Circuit Specialists Raspberry Pi", url: "https://www.circuitspecialists.com/blog/category/single-board-computers/raspberry-pi/feed/" },
+  { label: "SwitchDoc Labs", url: "https://www.switchdoc.com/category/raspberrypicat/feed/" },
+  { label: "Ozzmaker", url: "https://ozzmaker.com/category/raspberry-pi/feed/" },
+  { label: "PiCockpit", url: "https://picockpit.com/raspberry-pi/feed/" },
+  { label: "Cat Lamin", url: "https://catlamin.com/category/education/raspberry-pi/feed/" },
+  { label: "Embedded Lab", url: "https://embedded-lab.com/blog/category/raspberry-pie/feed/" },
+  { label: "The Rantings of a Madman", url: "https://feeds.feedburner.com/TheRantingsAndRavingsOfAMadman" },
+  { label: "FactoryForward", url: "https://www.factoryforward.com/category/raspberry-pi/feed/" },
+  { label: "Raspberry Pi Maker", url: "https://raspberrypimaker.com/feed/" },
+  { label: "OpenSource.com Raspberry Pi", url: "https://opensource.com/taxonomy/term/7974/feed?intcmp=701f2000000h4RcAAI&src=raspberry_pi_resource_menu4" }
 ];
 
 const cache = {
