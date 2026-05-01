@@ -50,3 +50,37 @@ The server listens on `0.0.0.0` by default so devices on your home network can r
 - Default schedule refreshes every hour (`60 * 60 * 1000` ms).
 - Filtering is heuristic; tune keyword lists in `src/analyzer.js` for your preferences.
 - SQLite database file is stored at `data/good-vibrations.db`.
+
+## Auto-start on boot (systemd)
+
+This project includes a service file at `good-vibrations-news.service` that can be installed to systemd.
+
+- Start service now:
+
+```bash
+sudo systemctl start good-vibrations-news.service
+```
+
+- Stop service:
+
+```bash
+sudo systemctl stop good-vibrations-news.service
+```
+
+- Restart service:
+
+```bash
+sudo systemctl restart good-vibrations-news.service
+```
+
+- Check status:
+
+```bash
+sudo systemctl status good-vibrations-news.service
+```
+
+- Enable at boot:
+
+```bash
+sudo systemctl enable good-vibrations-news.service
+```
