@@ -13,6 +13,11 @@ const AI_KEYWORDS = [
   "ai",
   "artificial intelligence",
   "machine learning",
+  "generative ai",
+  "genai",
+  "stable diffusion",
+  "diffusion model",
+  "image generation",
   "llm",
   "large language model",
   "openai",
@@ -32,7 +37,6 @@ const ANDROID_KEYWORDS = [
   "play store",
   "apk",
   "aosp",
-  "pixel",
   "one ui",
   "wear os",
   "android auto",
@@ -224,31 +228,55 @@ function countKeywordHits(text, keywords) {
   }, 0);
 }
 
-function detectCategory(text) {
+function isAndroidSource(source) {
+  const normalized = String(source || "").toLowerCase();
+  if (!normalized) return false;
+
+  if (normalized.includes("android")) return true;
+
+  const androidSourceHints = ["droid life", "phandroid", "talk android", "9to5google"];
+  return androidSourceHints.some((hint) => normalized.includes(hint));
+}
+
+function detectCategory(source, text) {
   const aiHits = countKeywordHits(text, AI_KEYWORDS);
   const androidHits = countKeywordHits(text, ANDROID_KEYWORDS);
   const makerHits = countKeywordHits(text, MAKER_KEYWORDS);
-  if (makerHits > 0) {
-    return "maker";
-  }
-
   const gamingHits = countKeywordHits(text, GAMING_KEYWORDS);
-  if (gamingHits > 0) {
-    return "gaming";
-  }
-
-  if (androidHits > 0) {
-    return "android";
-  }
-
   const scienceHits = countKeywordHits(text, SCIENCE_KEYWORDS);
-  if (scienceHits > 0) {
-    return "science";
+
+  const scores = {
+    maker: makerHits,
+    gaming: gamingHits,
+    android: androidHits,
+    science: scienceHits,
+    ai: aiHits
+  };
+
+  // Avoid Android false positives when only a weak Android mention exists.
+  const strongestNonAndroid = Math.max(scores.ai, scores.science, scores.maker, scores.gaming);
+  if (scores.android < 2 && strongestNonAndroid >= scores.android) {
+    scores.android = 0;
   }
 
-  // Use AI category only when no stronger topical bucket is present.
-  if (aiHits > 0) {
-    return "ai";
+  // Non-Android sources need stronger Android evidence to be classified as Android.
+  if (!isAndroidSource(source) && scores.android < 3) {
+    scores.android = 0;
+  }
+
+  const categoryOrder = ["maker", "gaming", "android", "science", "ai"];
+  let bestCategory = "general";
+  let bestScore = 0;
+
+  for (const category of categoryOrder) {
+    if (scores[category] > bestScore) {
+      bestCategory = category;
+      bestScore = scores[category];
+    }
+  }
+
+  if (bestScore > 0) {
+    return bestCategory;
   }
 
   return "general";
@@ -304,7 +332,7 @@ function scoreArticle(article, tuning) {
     sentimentResult.comparative * tuning.positivityWeight +
     positiveHits * 0.25 * tuning.positivityWeight -
     negativeHits * 0.35 * tuning.negativePenaltyWeight;
-  const category = detectCategory(combined);
+  const category = detectCategory(article.source, combined);
   const rankScore = aiHits * tuning.aiWeight + positivityScore;
 
   return {
