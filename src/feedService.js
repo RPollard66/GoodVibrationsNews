@@ -16,6 +16,8 @@ const parser = new Parser({
   }
 });
 
+const MAX_ITEMS_PER_FEED = 25;
+
 const FEEDS = [
   { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   { label: "NPR", url: "https://feeds.npr.org/1001/rss.xml" },
@@ -151,7 +153,7 @@ async function fetchFeed(feedConfig) {
 
   try {
     const feed = await parser.parseURL(feedConfig.url);
-    const items = (feed.items || []).map((item) => ({
+    const items = (feed.items || []).slice(0, MAX_ITEMS_PER_FEED).map((item) => ({
       source: feedConfig.label,
       sourceUrl: feedConfig.url,
       title: item.title || "Untitled",

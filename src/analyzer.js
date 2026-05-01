@@ -209,11 +209,6 @@ function countKeywordHits(text, keywords) {
 
 function detectCategory(text) {
   const aiHits = countKeywordHits(text, AI_KEYWORDS);
-  if (aiHits > 0) {
-    return "ai";
-  }
-
-  // Prefer maker classification over gaming when both are present.
   const makerHits = countKeywordHits(text, MAKER_KEYWORDS);
   if (makerHits > 0) {
     return "maker";
@@ -227,6 +222,11 @@ function detectCategory(text) {
   const scienceHits = countKeywordHits(text, SCIENCE_KEYWORDS);
   if (scienceHits > 0) {
     return "science";
+  }
+
+  // Use AI category only when no stronger topical bucket is present.
+  if (aiHits > 0) {
+    return "ai";
   }
 
   return "general";
