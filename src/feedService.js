@@ -42,7 +42,7 @@ const FEEDS = [
   { label: "ScienceDaily Top Science", url: "https://www.sciencedaily.com/rss/top/science.xml" },
   { label: "ScienceDaily Environment", url: "https://www.sciencedaily.com/rss/earth_climate.xml" },
   { label: "Science (AAAS)", url: "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science" },
-  { label: "Scientific American", url: "https://www.scientificamerican.com/feed/" },
+  { label: "ScienceAlert", url: "https://www.sciencealert.com/rss" },
   { label: "Science News", url: "https://www.sciencenews.org/feed" },
   { label: "Nature News", url: "http://feeds.nature.com/nature/rss/current" },
   { label: "Live Science", url: "https://www.livescience.com/feeds/all" },
@@ -58,8 +58,8 @@ const FEEDS = [
   // Engineering Blogs
   { label: "The Pragmatic Engineer", url: "https://blog.pragmaticengineer.com/rss/" },
   { label: "Stripe Blog", url: "https://stripe.com/blog/feed.rss" },
-  { label: "Uber Engineering", url: "https://www.uber.com/blog/engineering/rss/" },
-  { label: "Shopify Engineering", url: "https://shopifyengineering.myshopify.com/blogs/engineering.atom" },
+  { label: "Science Magazine News", url: "https://www.science.org/rss/news_current.xml" },
+  { label: "NASA Breaking News", url: "https://www.nasa.gov/rss/dyn/breaking_news.rss" },
   { label: "GitHub Engineering", url: "http://githubengineering.com/atom.xml" },
   { label: "Cloudflare Blog", url: "https://blog.cloudflare.com/rss/" },
   { label: "Dropbox Tech", url: "https://dropbox.tech/feed" },
@@ -67,11 +67,11 @@ const FEEDS = [
   { label: "Spotify Engineering", url: "https://engineering.atspotify.com/feed/" },
   // Machine Learning & AI
   { label: "DeepMind", url: "https://deepmind.com/blog/feed/basic/" },
-  { label: "OpenAI Engineering", url: "https://openai.com/news/engineering/rss.xml" },
+  { label: "OpenAI News", url: "https://openai.com/news/rss.xml" },
   { label: "Google AI Blog", url: "http://googleresearch.blogspot.com/atom.xml" },
   { label: "Towards Data Science", url: "https://towardsdatascience.com/feed" },
   { label: "PyTorch", url: "https://pytorch.org/feed" },
-  { label: "Unite.AI", url: "https://www.unite.ai/feed/" },
+  { label: "MIT Research News", url: "https://news.mit.edu/rss/research" },
   { label: "Jay Alammar", url: "https://jalammar.github.io/feed.xml" },
   { label: "ML@CMU", url: "https://blog.ml.cmu.edu/feed/" },
   // Raspberry Pi & Maker-specific feeds
@@ -97,7 +97,7 @@ const FEEDS = [
   { label: "Embedded Lab", url: "https://embedded-lab.com/blog/category/raspberry-pie/feed/" },
   { label: "The Rantings of a Madman", url: "https://feeds.feedburner.com/TheRantingsAndRavingsOfAMadman" },
   { label: "FactoryForward", url: "https://www.factoryforward.com/category/raspberry-pi/feed/" },
-  { label: "Raspberry Pi Maker", url: "https://raspberrypimaker.com/feed/" },
+  { label: "Raspberry Pi Tutorials", url: "https://www.raspberrypi.com/tutorials/feed/" },
   { label: "OpenSource.com Raspberry Pi", url: "https://opensource.com/taxonomy/term/7974/feed?intcmp=701f2000000h4RcAAI&src=raspberry_pi_resource_menu4" }
 ];
 
