@@ -23,6 +23,23 @@ const AI_KEYWORDS = [
   "chatgpt"
 ];
 
+const ANDROID_KEYWORDS = [
+  "android",
+  "android 14",
+  "android 15",
+  "android 16",
+  "google play",
+  "play store",
+  "apk",
+  "aosp",
+  "pixel",
+  "one ui",
+  "wear os",
+  "android auto",
+  "samsung galaxy",
+  "google pixel"
+];
+
 const SCIENCE_KEYWORDS = [
   "science",
   "research",
@@ -209,6 +226,7 @@ function countKeywordHits(text, keywords) {
 
 function detectCategory(text) {
   const aiHits = countKeywordHits(text, AI_KEYWORDS);
+  const androidHits = countKeywordHits(text, ANDROID_KEYWORDS);
   const makerHits = countKeywordHits(text, MAKER_KEYWORDS);
   if (makerHits > 0) {
     return "maker";
@@ -217,6 +235,10 @@ function detectCategory(text) {
   const gamingHits = countKeywordHits(text, GAMING_KEYWORDS);
   if (gamingHits > 0) {
     return "gaming";
+  }
+
+  if (androidHits > 0) {
+    return "android";
   }
 
   const scienceHits = countKeywordHits(text, SCIENCE_KEYWORDS);
