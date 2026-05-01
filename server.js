@@ -6,6 +6,7 @@ const {
   getTuning,
   updateTuning
 } = require("./src/feedService");
+const { getCategoryDebug } = require("./src/analyzer");
 const { ensureDb } = require("./src/storage");
 
 const app = express();
@@ -37,6 +38,37 @@ app.post("/api/refresh", async (_req, res) => {
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", service: "good-vibrations-news" });
+});
+
+app.get("/api/debug/categories", async (req, res) => {
+  try {
+    const payload = await getCachedArticles();
+    const articles = payload.articles || [];
+    const query = String(req.query.q || "").trim().toLowerCase();
+    const requestedLimit = Number.parseInt(String(req.query.limit || "50"), 10);
+    const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(200, requestedLimit)) : 50;
+
+    const filtered = query
+      ? articles.filter((article) => {
+          const title = String(article.title || "").toLowerCase();
+          const source = String(article.source || "").toLowerCase();
+          return title.includes(query) || source.includes(query);
+        })
+      : articles;
+
+    const items = filtered.slice(0, limit).map((article) => getCategoryDebug(article));
+
+    res.json({
+      totalArticles: articles.length,
+      returned: items.length,
+      query,
+      limit,
+      items
+    });
+  } catch (error) {
+    console.error("Failed to build category debug payload", error);
+    res.status(500).json({ error: "Failed to build category debug payload." });
+  }
 });
 
 app.get("/api/settings", async (_req, res) => {

@@ -42,6 +42,7 @@ The server listens on `0.0.0.0` by default so devices on your home network can r
 - `GET /api/settings` -> return scoring settings
 - `POST /api/settings` -> update scoring settings and recompute results
 - `GET /api/health` -> service health
+- `GET /api/debug/categories` -> category diagnostics (supports `q` and `limit` query params)
 
 ## Notes
 

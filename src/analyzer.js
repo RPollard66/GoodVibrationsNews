@@ -238,14 +238,14 @@ function isAndroidSource(source) {
   return androidSourceHints.some((hint) => normalized.includes(hint));
 }
 
-function detectCategory(source, text) {
+function getCategoryDecision(source, text) {
   const aiHits = countKeywordHits(text, AI_KEYWORDS);
   const androidHits = countKeywordHits(text, ANDROID_KEYWORDS);
   const makerHits = countKeywordHits(text, MAKER_KEYWORDS);
   const gamingHits = countKeywordHits(text, GAMING_KEYWORDS);
   const scienceHits = countKeywordHits(text, SCIENCE_KEYWORDS);
 
-  const scores = {
+  const rawScores = {
     maker: makerHits,
     gaming: gamingHits,
     android: androidHits,
@@ -253,14 +253,18 @@ function detectCategory(source, text) {
     ai: aiHits
   };
 
+  const scores = { ...rawScores };
+
   // Avoid Android false positives when only a weak Android mention exists.
   const strongestNonAndroid = Math.max(scores.ai, scores.science, scores.maker, scores.gaming);
+  const androidSource = isAndroidSource(source);
+
   if (scores.android < 2 && strongestNonAndroid >= scores.android) {
     scores.android = 0;
   }
 
   // Non-Android sources need stronger Android evidence to be classified as Android.
-  if (!isAndroidSource(source) && scores.android < 3) {
+  if (!androidSource && scores.android < 3) {
     scores.android = 0;
   }
 
@@ -275,11 +279,26 @@ function detectCategory(source, text) {
     }
   }
 
-  if (bestScore > 0) {
-    return bestCategory;
-  }
+  const category = bestScore > 0 ? bestCategory : "general";
 
-  return "general";
+  return {
+    category,
+    rawScores,
+    adjustedScores: scores,
+    strongestNonAndroid,
+    androidSource,
+    hits: {
+      ai: aiHits,
+      android: androidHits,
+      maker: makerHits,
+      gaming: gamingHits,
+      science: scienceHits
+    }
+  };
+}
+
+function detectCategory(source, text) {
+  return getCategoryDecision(source, text).category;
 }
 
 function cleanText(value) {
@@ -332,7 +351,8 @@ function scoreArticle(article, tuning) {
     sentimentResult.comparative * tuning.positivityWeight +
     positiveHits * 0.25 * tuning.positivityWeight -
     negativeHits * 0.35 * tuning.negativePenaltyWeight;
-  const category = detectCategory(article.source, combined);
+  const categoryDecision = getCategoryDecision(article.source, combined);
+  const category = categoryDecision.category;
   const rankScore = aiHits * tuning.aiWeight + positivityScore;
 
   return {
@@ -346,6 +366,24 @@ function scoreArticle(article, tuning) {
     positivityScore,
     isPositive: positivityScore > tuning.positivityThreshold,
     sentimentScore: sentimentResult.score
+  };
+}
+
+function getCategoryDebug(article) {
+  const combined = cleanText(`${article?.title || ""} ${article?.contentSnippet || ""} ${article?.content || ""}`);
+  const decision = getCategoryDecision(article?.source || "", combined);
+
+  return {
+    source: article?.source || "",
+    title: article?.title || "",
+    category: decision.category,
+    existingCategory: article?.category || null,
+    hits: decision.hits,
+    rawScores: decision.rawScores,
+    adjustedScores: decision.adjustedScores,
+    strongestNonAndroid: decision.strongestNonAndroid,
+    androidSource: decision.androidSource,
+    preview: combined.slice(0, 240)
   };
 }
 
@@ -368,5 +406,6 @@ function analyzeAndFilterArticles(articles, tuningInput = DEFAULT_TUNING) {
 module.exports = {
   DEFAULT_TUNING,
   normalizeTuning,
-  analyzeAndFilterArticles
+  analyzeAndFilterArticles,
+  getCategoryDebug
 };
