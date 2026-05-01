@@ -272,7 +272,13 @@ async function refreshArticles(force) {
   const allArticles = settled.flatMap((entry) => entry.items);
   const feedStats = settled.map((entry) => entry.result);
 
-  const analyzed = analyzeAndFilterArticles(dedupeArticles(allArticles), settings).slice(0, 120);
+  const analyzed = analyzeAndFilterArticles(dedupeArticles(allArticles), settings)
+    .sort((a, b) => {
+      const ta = a.pubDate ? new Date(a.pubDate).getTime() : 0;
+      const tb = b.pubDate ? new Date(b.pubDate).getTime() : 0;
+      return tb - ta;
+    })
+    .slice(0, 120);
 
   cache.updatedAt = new Date().toISOString();
   cache.articles = analyzed;
