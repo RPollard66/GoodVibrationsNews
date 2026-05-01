@@ -100,10 +100,15 @@ function renderFeedStats(feedStats) {
 function renderArticles() {
   articleContainer.innerHTML = "";
 
-  const visible =
-    state.selectedFilter === "all"
-      ? state.allArticles
-      : state.allArticles.filter((article) => article.category === state.selectedFilter);
+  const visible = state.selectedFilter === "all"
+    ? state.allArticles
+    : state.allArticles.filter((article) => {
+      if (state.selectedFilter === "science") {
+        return article.category === "science" || article.category === "tech";
+      }
+
+      return article.category === state.selectedFilter;
+    });
 
   statusLine.textContent = `Showing ${visible.length} uplifting articles`;
 

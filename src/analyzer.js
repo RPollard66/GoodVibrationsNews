@@ -23,7 +23,25 @@ const AI_KEYWORDS = [
   "chatgpt"
 ];
 
-const TECH_KEYWORDS = [
+const SCIENCE_KEYWORDS = [
+  "science",
+  "research",
+  "scientist",
+  "scientists",
+  "physics",
+  "chemistry",
+  "biology",
+  "biotech",
+  "neuroscience",
+  "astronomy",
+  "space",
+  "planet",
+  "climate",
+  "earth",
+  "geology",
+  "environment",
+  "laboratory",
+  "peer reviewed",
   "software",
   "hardware",
   "tech",
@@ -206,9 +224,9 @@ function detectCategory(text) {
     return "gaming";
   }
 
-  const techHits = countKeywordHits(text, TECH_KEYWORDS);
-  if (techHits > 0) {
-    return "tech";
+  const scienceHits = countKeywordHits(text, SCIENCE_KEYWORDS);
+  if (scienceHits > 0) {
+    return "science";
   }
 
   return "general";

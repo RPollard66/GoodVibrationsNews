@@ -1,7 +1,7 @@
 {
   "name": "Good Vibrations News",
   "short_name": "GV News",
-  "description": "Positive, uplifting tech and maker news.",
+  "description": "Positive, uplifting science and maker news.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b1221",
