@@ -18,6 +18,46 @@ const parser = new Parser({
 
 const MAX_ITEMS_PER_FEED = 25;
 
+function sanitizeFeedText(value) {
+  return String(value || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<pre[\s\S]*?<\/pre>/gi, " ")
+    .replace(/<code[\s\S]*?<\/code>/gi, " ")
+    .replace(/<references[\s\S]*?<\/references>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function looksLikeCodeText(value) {
+  const text = String(value || "").toLowerCase();
+  const markers = ["window.", "let ", "const ", "import ", "function ", "=>", "@article", "@misc", "class=", "href="];
+  const hitCount = markers.reduce((count, marker) => count + (text.includes(marker) ? 1 : 0), 0);
+  return hitCount >= 3;
+}
+
+function pickSnippet(item) {
+  const candidates = [item.contentSnippet, item.summary, item.content, item["content:encoded"]];
+
+  for (const candidate of candidates) {
+    const cleaned = sanitizeFeedText(candidate);
+    if (!cleaned) continue;
+    if (cleaned.length < 60) continue;
+    if (looksLikeCodeText(cleaned)) continue;
+    return cleaned;
+  }
+
+  return "";
+}
+
 const FEEDS = [
   { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
   { label: "NPR", url: "https://feeds.npr.org/1001/rss.xml" },
@@ -153,17 +193,22 @@ async function fetchFeed(feedConfig) {
 
   try {
     const feed = await parser.parseURL(feedConfig.url);
-    const items = (feed.items || []).slice(0, MAX_ITEMS_PER_FEED).map((item) => ({
-      source: feedConfig.label,
-      sourceUrl: feedConfig.url,
-      title: item.title || "Untitled",
-      link: item.link || "",
-      pubDate: item.pubDate || item.isoDate || null,
-      creator: item.creator || item.author || "",
-      categories: item.categories || [],
-      contentSnippet: item.contentSnippet || item.summary || "",
-      content: item.content || item["content:encoded"] || ""
-    }));
+    const items = (feed.items || []).slice(0, MAX_ITEMS_PER_FEED).map((item) => {
+      const cleanedContent = sanitizeFeedText(item.content || item["content:encoded"] || item.summary || "");
+      const cleanedSnippet = pickSnippet(item);
+
+      return {
+        source: feedConfig.label,
+        sourceUrl: feedConfig.url,
+        title: item.title || "Untitled",
+        link: item.link || "",
+        pubDate: item.pubDate || item.isoDate || null,
+        creator: item.creator || item.author || "",
+        categories: item.categories || [],
+        contentSnippet: cleanedSnippet || cleanedContent || "Read the full story on the source site.",
+        content: cleanedContent
+      };
+    });
 
     result.ok = true;
     result.count = items.length;
