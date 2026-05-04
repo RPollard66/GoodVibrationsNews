@@ -345,7 +345,56 @@ const KEYWORDS = {
         // Tools / equipment
         "laser cutter",
         "vinyl cutter",
-        "cnc router"
+        "cnc router",
+        // CAD / design / EDA software
+        "fusion 360",
+        "autodesk fusion",
+        "freecad",
+        "openscad",
+        "tinkercad",
+        "onshape",
+        "solidworks",
+        "shapr3d",
+        "plasticity 3d",
+        "blender 3d",
+        "sketchup",
+        "inkscape",
+        "kicad",
+        "easyeda",
+        "eagle pcb",
+        "fritzing",
+        "computer aided design",
+        "parametric modeling",
+        "cad model",
+        "cad software",
+        "3d cad",
+        "3d modeling",
+        "3d design",
+        "home assistant",
+        "home automation",
+        "smart home",
+        "klipper firmware",
+        "marlin firmware",
+        "octoprint",
+        "mainsail",
+        "fluidd",
+        // Project / tutorial framing common in maker writing
+        "diy project",
+        "weekend project",
+        "build guide",
+        "step by step build",
+        "hardware project",
+        "electronics project",
+        "retro computing",
+        "retro gaming build",
+        "build a",
+        "how i built",
+        // Pi-ecosystem unambiguous identifiers
+        "pi camera",
+        "pi 5",
+        "pi 4",
+        "pi zero",
+        "pico w"
       ],
       weak: [
         "maker",
@@ -398,6 +447,24 @@ const KEYWORDS = {
         "formlabs",
         "ultimaker",
         "bambu",
+        // CAD / EDA — short forms
+        "cad",
+        "fusion360",
+        "blender",
+        "klipper",
+        // Pi ecosystem short forms
+        "rpi",
+        "pico",
+        "picamera",
+        "hat",
+        "phat",
+        "bonnet",
+        "home-assistant",
+        "hass",
+        "hassio",
+        "node-red",
+        "nodered",
+        "esphome",
         // Print-problem terms — kept here to help categorize. Analyzer
         // treats these as neutral so troubleshooting articles still surface.
         "stringing",
@@ -819,7 +886,34 @@ const KEYWORDS = {
   sourceHints: {
     android: ["android", "9to5google", "droid life", "phandroid", "talk android"],
     tech: ["hacker news", "ars technica", "the register", "bleeping computer", "krebs"],
-    maker: ["hackaday", "hackster", "tom's hardware", "all3dp"],
+    maker: [
+      "hackaday",
+      "hackster",
+      "tom's hardware",
+      "all3dp",
+      "raspberry pi",
+      "jeff geerling",
+      "pi hut",
+      "pimoroni",
+      "pi my life up",
+      "raspberrytips",
+      "raspberrypi",
+      "recantha",
+      "pi3g",
+      "peppe8o",
+      "switchdoc",
+      "ozzmaker",
+      "picockpit",
+      "raspberry pipod",
+      "raspberry pi spy",
+      "factoryforward",
+      "opensource.com",
+      "alex ellis",
+      "embedded lab",
+      "circuit specialists",
+      "cat lamin",
+      "rantings"
+    ],
     gaming: ["polygon", "kotaku", "ign", "rock paper", "eurogamer", "pc gamer"],
     science: ["nature", "scientific american", "new scientist", "phys.org", "sciencealert"]
   }
@@ -1015,17 +1109,23 @@ function scoreArticle(article, tuning) {
     categoryStrongHits
   );
 
-  // Strong category match bypasses the positivity threshold so cybersecurity
-  // reporting, maker troubleshooting, and 3D-printing problem articles still
-  // surface. Triggered by either a couple of strong keyword hits OR a clearly
-  // category-relevant article overall (high combined category score).
-  const isStrongCategoryMatch = categoryStrongHits >= 2 || categoryScore >= 12;
+  // Strong category match bypasses the positivity threshold so factual /
+  // tutorial / troubleshooting articles in our interest areas still surface
+  // even when their tone is neutral. Triggered when an article is clearly
+  // about one of our categories.
+  const isStrongCategoryMatch = categoryStrongHits >= 1 && categoryScore >= 6;
+  // Maker / Android / AI tutorials are often dry but on-topic — let any
+  // article with a high category score through.
+  const isClearCategoryHit = category !== "tech" && categoryScore >= 9;
   // Cybersecurity / cyber-attack stories live in `tech` and are flagged as
   // "soft negative" by words like "attack" or "breach" — keep them when the
   // article is clearly about tech.
   const isCyberContext = category === "tech" && categoryScore >= 6 && hardNegHits === 0;
   const isPositive =
-    positivityScore > tuning.positivityThreshold || isStrongCategoryMatch || isCyberContext;
+    positivityScore > tuning.positivityThreshold ||
+    isStrongCategoryMatch ||
+    isClearCategoryHit ||
+    isCyberContext;
 
   const aiHits = categoryScores.ai.strongHits + categoryScores.ai.weakHits;
   const rankScore =
