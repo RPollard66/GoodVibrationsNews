@@ -20,7 +20,7 @@ services:
 
         if ! command -v git >/dev/null 2>&1; then
           apt-get update
-          apt-get install -y --no-install-recommends git ca-certificates
+          apt-get install -y --no-install-recommends git ca-certificates python3 make g++
           rm -rf /var/lib/apt/lists/*
         fi
 
