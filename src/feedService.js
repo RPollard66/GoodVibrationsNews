@@ -58,9 +58,6 @@ function pickSnippet(item) {
 }
 
 const FEEDS = [
-  { label: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" },
-  { label: "NPR", url: "https://feeds.npr.org/1001/rss.xml" },
-  { label: "New York Times", url: "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml" },
   { label: "WIRED", url: "https://www.wired.com/feed/rss" },
   { label: "Phys.org", url: "https://phys.org/rss-feed/" },
   { label: "Quanta Magazine", url: "https://www.quantamagazine.org/feed/" },
