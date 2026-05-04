@@ -707,7 +707,7 @@ const KEYWORDS = {
       ]
     },
 
-    tech: {
+    general: {
       strong: [
         // General software / dev
         "open source",
@@ -1002,7 +1002,7 @@ const KEYWORDS = {
   // Source-name hints — used only to nudge category, never to filter.
   sourceHints: {
     android: ["android", "9to5google", "droid life", "phandroid", "talk android"],
-    tech: ["hacker news", "ars technica", "the register", "bleeping computer", "krebs", "cloudflare", "kubernetes"],
+    general: ["hacker news", "ars technica", "the register", "bleeping computer", "krebs", "cloudflare", "kubernetes"],
     maker: [
       "hackaday",
       "hackster",
@@ -1144,7 +1144,7 @@ function hasCouponCodeContext(value) {
 // Per-axis scoring
 // ---------------------------------------------------------------------------
 
-const CATEGORY_NAMES = ["maker", "gaming", "android", "ai", "science", "tech"];
+const CATEGORY_NAMES = ["maker", "gaming", "android", "ai", "science", "general"];
 
 // Title hits weighted heaviest because titles are the strongest signal.
 // Strong keywords weighted ×2 over weak.
@@ -1177,8 +1177,8 @@ function scoreCategories(normalizedTitle, normalizedBody, source) {
 }
 
 function pickCategory(categoryScores) {
-  // Preference order: specific categories beat the generic "tech" bucket.
-  const preferenceOrder = ["maker", "gaming", "android", "ai", "science", "tech"];
+  // Preference order: specific categories beat the generic "general" bucket.
+  const preferenceOrder = ["maker", "gaming", "android", "ai", "science", "general"];
 
   // First pick: best of the specific (non-tech) categories only. If any has a
   // real signal (strong hit OR a meaningful score), it wins outright over the
@@ -1188,7 +1188,7 @@ function pickCategory(categoryScores) {
   let bestSpecific = null;
   let bestSpecificScore = 0;
   for (const name of preferenceOrder) {
-    if (name === "tech") continue;
+    if (name === "general") continue;
     const entry = categoryScores[name];
     if (entry.score > bestSpecificScore) {
       bestSpecific = name;
@@ -1205,9 +1205,9 @@ function pickCategory(categoryScores) {
   }
 
   // No specific category had a strong claim. Fall back to whoever scored
-  // highest overall (typically tech).
-  let best = "tech";
-  let bestScore = categoryScores.tech.score;
+  // highest overall (typically general).
+  let best = "general";
+  let bestScore = categoryScores.general.score;
   for (const name of preferenceOrder) {
     const s = categoryScores[name].score;
     if (s > bestScore) {
@@ -1217,9 +1217,9 @@ function pickCategory(categoryScores) {
   }
 
   // Need a meaningful match to claim a specific category at all.
-  if (best !== "tech" && bestScore < 3) {
-    best = "tech";
-    bestScore = categoryScores.tech.score;
+  if (best !== "general" && bestScore < 3) {
+    best = "general";
+    bestScore = categoryScores.general.score;
   }
 
   return { category: best, score: bestScore };
@@ -1284,11 +1284,11 @@ function scoreArticle(article, tuning) {
   const isStrongCategoryMatch = categoryStrongHits >= 1 && categoryScore >= 6;
   // Maker / Android / AI tutorials are often dry but on-topic — let any
   // article with a high category score through.
-  const isClearCategoryHit = category !== "tech" && categoryScore >= 9;
+  const isClearCategoryHit = category !== "general" && categoryScore >= 9;
   // Cybersecurity / cyber-attack stories live in `tech` and are flagged as
   // "soft negative" by words like "attack" or "breach" — keep them when the
   // article is clearly about tech.
-  const isCyberContext = category === "tech" && categoryScore >= 6 && hardNegHits === 0;
+  const isCyberContext = category === "general" && categoryScore >= 6 && hardNegHits === 0;
   const isPositive =
     positivityScore > tuning.positivityThreshold ||
     isStrongCategoryMatch ||
