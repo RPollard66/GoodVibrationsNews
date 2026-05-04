@@ -165,7 +165,15 @@ const FEEDS = [
   { label: "Home Assistant Blog", url: "https://www.home-assistant.io/atom.xml" },
   { label: "Pi-hole Blog", url: "https://pi-hole.net/blog/feed/" },
   { label: "Nextcloud Blog", url: "https://nextcloud.com/blog/feed/" },
-  { label: "Prusa Blog", url: "https://blog.prusa3d.com/feed/" }
+  { label: "Prusa Blog", url: "https://blog.prusa3d.com/feed/" },
+  // Personal electric mobility (ebikes, scooters, EUCs, eboards)
+  { label: "Electrek", url: "https://electrek.co/feed/" },
+  { label: "Electric Bike Report", url: "https://www.electricbikereport.com/feed/" },
+  // Birding / ornithology / field recording
+  { label: "Cornell Lab — All About Birds", url: "https://www.allaboutbirds.org/news/feed/" },
+  { label: "Audubon", url: "https://www.audubon.org/rss.xml" },
+  // Weather (Tempest / personal weather stations)
+  { label: "WeatherFlow Blog", url: "https://blog.weatherflow.com/feed/" }
 ];
 
 const cache = {

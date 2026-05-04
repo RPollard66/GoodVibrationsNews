@@ -226,7 +226,46 @@ const KEYWORDS = {
         "conservation success",
         "species recovery",
         "wildlife conservation",
-        "biodiversity"
+        "biodiversity",
+        // Citizen-science / hobbyist science
+        "birdnet",
+        "birdnet-go",
+        "birdnet go",
+        "cornell lab of ornithology",
+        "cornell lab",
+        "all about birds",
+        "macaulay library",
+        "ebird",
+        "e-bird",
+        "xeno-canto",
+        "xeno canto",
+        "ornithology",
+        "bird identification",
+        "bird songs",
+        "bird calls",
+        "bird migration",
+        "bird watching",
+        "birdwatching",
+        "bird species",
+        "songbird",
+        "raptor migration",
+        "audubon",
+        "field recording",
+        "nature recording",
+        "soundscape ecology",
+        "bioacoustics",
+        "lavalier microphone",
+        "shotgun microphone",
+        "parabolic microphone",
+        "acoustic monitoring",
+        "weatherflow tempest",
+        "tempest weather station",
+        "personal weather station",
+        "weather station",
+        "citizen science",
+        "amateur astronomy",
+        "backyard astronomy",
+        "phenology"
       ],
       weak: [
         "science",
@@ -442,7 +481,22 @@ const KEYWORDS = {
         "pop!_os",
         "pop os",
         "endeavouros",
-        "manjaro"
+        "manjaro",
+        // Personal electric mobility
+        "electric bike",
+        "electric bicycle",
+        "e-bike",
+        "ebike",
+        "electric scooter",
+        "e-scooter",
+        "electric unicycle",
+        "electric skateboard",
+        "e-skateboard",
+        "onewheel",
+        "boosted board",
+        "micromobility",
+        "personal electric vehicle",
+        "cargo bike"
       ],
       weak: [
         "maker",
@@ -988,10 +1042,22 @@ const KEYWORDS = {
       "pi-hole",
       "pihole",
       "nextcloud",
-      "prusa"
+      "prusa",
+      "electrek",
+      "electric bike report"
     ],
     gaming: ["polygon", "kotaku", "ign", "rock paper", "eurogamer", "pc gamer"],
-    science: ["nature", "scientific american", "new scientist", "phys.org", "sciencealert"]
+    science: [
+      "nature",
+      "scientific american",
+      "new scientist",
+      "phys.org",
+      "sciencealert",
+      "all about birds",
+      "cornell lab",
+      "audubon",
+      "weatherflow"
+    ],
   }
 };
 
