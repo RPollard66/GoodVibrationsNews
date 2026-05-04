@@ -110,7 +110,7 @@ function renderArticles() {
       return article.category === state.selectedFilter;
     });
 
-  statusLine.textContent = `Showing ${visible.length} uplifting articles`;
+  statusLine.textContent = `Showing ${visible.length} articles`;
 
   visible.forEach((article) => {
     const clone = template.content.cloneNode(true);
