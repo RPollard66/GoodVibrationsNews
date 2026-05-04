@@ -1355,7 +1355,6 @@ function analyzeAndFilterArticles(articles, tuningInput = DEFAULT_TUNING) {
     .filter((article) => !article.hasCouponCodePromo)
     .filter((article) => !article.hasPolitics)
     .filter((article) => !article.isHardNegative)
-    .filter((article) => article.isPositive)
     .sort((a, b) => {
       if (b.rankScore !== a.rankScore) return b.rankScore - a.rankScore;
       if (b.aiScore !== a.aiScore) return b.aiScore - a.aiScore;

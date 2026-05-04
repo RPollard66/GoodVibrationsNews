@@ -113,7 +113,7 @@ function renderArticles() {
     clone.querySelector(".story-title").textContent = article.title;
     const snippetNode = clone.querySelector(".story-snippet");
     const expandBtn = clone.querySelector(".expand-btn");
-    const fullSnippet = article.contentSnippet || "Positive trend detected in this story.";
+    const fullSnippet = article.contentSnippet || "";
 
     snippetNode.textContent = fullSnippet;
     snippetNode.classList.add("collapsed");
