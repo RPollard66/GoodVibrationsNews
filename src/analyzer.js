@@ -1180,9 +1180,34 @@ function pickCategory(categoryScores) {
   // Preference order: specific categories beat the generic "tech" bucket.
   const preferenceOrder = ["maker", "gaming", "android", "ai", "science", "tech"];
 
-  let best = "tech";
-  let bestScore = 0;
+  // First pick: best of the specific (non-tech) categories only. If any has a
+  // real signal (strong hit OR a meaningful score), it wins outright over the
+  // generic tech bucket. This keeps 3D-printing / CAD / homelab articles in
+  // maker even when they also mention generic terms like "software" or
+  // "hardware" that would otherwise pile up in tech.
+  let bestSpecific = null;
+  let bestSpecificScore = 0;
+  for (const name of preferenceOrder) {
+    if (name === "tech") continue;
+    const entry = categoryScores[name];
+    if (entry.score > bestSpecificScore) {
+      bestSpecific = name;
+      bestSpecificScore = entry.score;
+    }
+  }
 
+  if (bestSpecific) {
+    const entry = categoryScores[bestSpecific];
+    // A strong keyword hit, or a moderately strong score, claims the article.
+    if (entry.strongHits >= 1 || bestSpecificScore >= 6) {
+      return { category: bestSpecific, score: bestSpecificScore };
+    }
+  }
+
+  // No specific category had a strong claim. Fall back to whoever scored
+  // highest overall (typically tech).
+  let best = "tech";
+  let bestScore = categoryScores.tech.score;
   for (const name of preferenceOrder) {
     const s = categoryScores[name].score;
     if (s > bestScore) {
@@ -1191,9 +1216,10 @@ function pickCategory(categoryScores) {
     }
   }
 
-  // Need a meaningful match to claim a specific category.
+  // Need a meaningful match to claim a specific category at all.
   if (best !== "tech" && bestScore < 3) {
     best = "tech";
+    bestScore = categoryScores.tech.score;
   }
 
   return { category: best, score: bestScore };
