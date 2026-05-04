@@ -22,18 +22,13 @@
     <main class="app-shell">
       <header class="hero">
         <div class="hero-topline">
-          <span class="strict-badge">Filters: No Politics / No Disasters / No Spam</span>
+          <p class="eyebrow">Tech, Science, and Gaming</p>
         </div>
         <h1>Good Vibrations News</h1>
         <p class="subtitle">
           AI-first headlines across world, science, android, and gaming RSS feeds.
         </p>
       </header>
-
-      <section class="view-tabs" aria-label="App views">
-        <button class="tab-chip active" data-view="news" type="button">News</button>
-        <button class="tab-chip" data-view="settings" type="button">Settings</button>
-      </section>
 
       <section id="newsView" class="app-view">
         <section class="filters" aria-label="Category filters">
@@ -50,49 +45,6 @@
           <h2 class="section-title">Top Stories</h2>
           <div id="statusLine" class="status-line">Fetching stories...</div>
           <div id="articles" class="card-grid"></div>
-        </section>
-      </section>
-
-      <section id="settingsView" class="app-view is-hidden">
-        <section class="meta-grid">
-          <div class="meta-box">
-            <span>Last Updated</span>
-            <strong id="lastUpdated">Loading...</strong>
-          </div>
-          <div class="meta-box">
-            <span>Next Auto Refresh</span>
-            <strong id="nextRefresh">Calculating...</strong>
-          </div>
-          <button id="refreshBtn" class="refresh-btn" type="button">Refresh Now</button>
-        </section>
-
-        <section class="controls-panel">
-          <h2 class="section-title">Scoring Controls</h2>
-          <p class="controls-subtitle">Tune how strongly AI and sentiment shape your story feed.</p>
-          <form id="settingsForm" class="controls-grid">
-            <label class="control-card">
-              <span>AI Weight <strong id="aiWeightValue">2.5</strong></span>
-              <input id="aiWeight" name="aiWeight" type="range" min="0" max="5" step="0.1" value="2.5" />
-            </label>
-            <label class="control-card">
-              <span>Positivity Weight <strong id="positivityWeightValue">2.2</strong></span>
-              <input id="positivityWeight" name="positivityWeight" type="range" min="0.2" max="3" step="0.1" value="2.2" />
-            </label>
-            <label class="control-card">
-              <span>Negative Penalty <strong id="negativePenaltyWeightValue">3.0</strong></span>
-              <input id="negativePenaltyWeight" name="negativePenaltyWeight" type="range" min="0.2" max="3" step="0.1" value="3" />
-            </label>
-            <label class="control-card">
-              <span>Positivity Threshold <strong id="positivityThresholdValue">0.45</strong></span>
-              <input id="positivityThreshold" name="positivityThreshold" type="range" min="-0.5" max="1.5" step="0.01" value="0.45" />
-            </label>
-          </form>
-          <button id="saveSettingsBtn" class="refresh-btn settings-btn" type="button">Save & Recompute</button>
-        </section>
-
-        <section>
-          <h2 class="section-title">Feed Health</h2>
-          <div id="feedStats" class="stats-grid"></div>
         </section>
       </section>
     </main>
