@@ -52,6 +52,71 @@ The server listens on `0.0.0.0` by default so devices on your home network can r
 - Filtering is heuristic; tune keyword lists in `src/analyzer.js` for your preferences.
 - SQLite database file is stored at `data/good-vibrations.db`.
 
+## Run via Docker (Raspberry Pi or any Docker host)
+
+The included `compose.yaml` pulls the latest code from the `main` branch of this repo every time the container starts, so it is always up to date without any manual git operations on the host.
+
+### Prerequisites
+
+- Docker and Docker Compose (v2) installed on the host
+
+```bash
+# Raspberry Pi / Debian-based
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   # allow running docker without sudo (re-login after)
+```
+
+### First-time setup
+
+```bash
+mkdir ~/good-vibrations-news
+cd ~/good-vibrations-news
+curl -O https://raw.githubusercontent.com/RPollard66/GoodVibrationsNews/main/compose.yaml
+docker compose up -d
+```
+
+This will:
+1. Pull the latest `node:current-bookworm-slim` image
+2. Clone this repo inside the container
+3. Run `npm ci` and start the server on port **4000**
+4. Start a Watchtower sidecar that checks every 5 minutes for updated Node images
+
+### Access the app
+
+- `http://<pi-ip-address>:4000`
+
+### Common operations
+
+```bash
+# View logs
+docker compose logs -f good-vibrations-news
+
+# Stop
+docker compose down
+
+# Restart (also pulls latest code from GitHub)
+docker compose restart good-vibrations-news
+
+# Force full rebuild with latest code and Node image
+docker compose pull && docker compose up -d --force-recreate
+```
+
+### Optional: change port
+
+Create a `.env` file next to `compose.yaml`:
+
+```
+PORT=8080
+```
+
+Then restart: `docker compose up -d`
+
+### Data persistence
+
+Article cache and settings are stored in a Docker volume (`goodvibrationsnews_app_data`) and survive container restarts and image updates.
+
+---
+
 ## Auto-start on boot (systemd)
 
 This project includes a service file at `good-vibrations-news.service` that can be installed to systemd.
