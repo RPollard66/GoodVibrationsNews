@@ -75,6 +75,13 @@ function saveSnapshot(payload) {
   conn
     .prepare("INSERT INTO snapshots (updated_at, payload) VALUES (?, ?)")
     .run(payload.updatedAt, JSON.stringify(payload));
+
+  const retain = Math.max(1, parseInt(process.env.SNAPSHOT_RETAIN || "5", 10));
+  conn
+    .prepare(
+      "DELETE FROM snapshots WHERE id NOT IN (SELECT id FROM snapshots ORDER BY id DESC LIMIT ?)"
+    )
+    .run(retain);
 }
 
 function getLatestSnapshot() {

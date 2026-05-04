@@ -12,6 +12,7 @@ services:
       PORT: ${PORT:-4000}
       HOST: 0.0.0.0
       NODE_ENV: production
+      SNAPSHOT_RETAIN: ${SNAPSHOT_RETAIN:-5}
     command:
       - /bin/sh
       - -lc
