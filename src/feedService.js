@@ -149,7 +149,16 @@ const FEEDS = [
   { label: "The Rantings of a Madman", url: "https://feeds.feedburner.com/TheRantingsAndRavingsOfAMadman" },
   { label: "FactoryForward", url: "https://www.factoryforward.com/category/raspberry-pi/feed/" },
   { label: "Raspberry Pi Tutorials", url: "https://www.raspberrypi.com/tutorials/feed/" },
-  { label: "OpenSource.com Raspberry Pi", url: "https://opensource.com/taxonomy/term/7974/feed?intcmp=701f2000000h4RcAAI&src=raspberry_pi_resource_menu4" }
+  { label: "OpenSource.com Raspberry Pi", url: "https://opensource.com/taxonomy/term/7974/feed?intcmp=701f2000000h4RcAAI&src=raspberry_pi_resource_menu4" },
+  // Homelab / self-hosted / Docker feeds
+  { label: "Docker Blog", url: "https://www.docker.com/blog/feed/" },
+  { label: "selfh.st", url: "https://selfh.st/rss/" },
+  { label: "Noted (Homelab)", url: "https://noted.lol/rss/" },
+  { label: "LinuxServer.io", url: "https://www.linuxserver.io/blog/feed.xml" },
+  { label: "Earthly Blog", url: "https://earthly.dev/blog/rss.xml" },
+  { label: "Cloudflare Blog", url: "https://blog.cloudflare.com/rss/" },
+  { label: "Kubernetes Blog", url: "https://kubernetes.io/feed.xml" },
+  { label: "Landchad", url: "https://landchad.net/rss.xml" }
 ];
 
 const cache = {
