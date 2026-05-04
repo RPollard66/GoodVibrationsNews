@@ -24,6 +24,8 @@ services:
           rm -rf /var/lib/apt/lists/*
         fi
 
+        export GIT_TERMINAL_PROMPT=0
+
         if [ ! -d /workspace/.git ]; then
           git clone --depth 1 --branch "$$REPO_BRANCH" "$$REPO_URL" /tmp/gvn-clone
           cp -a /tmp/gvn-clone/. /workspace/
