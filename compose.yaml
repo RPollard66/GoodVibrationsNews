@@ -27,12 +27,12 @@ services:
         export GIT_TERMINAL_PROMPT=0
 
         if [ ! -d /workspace/.git ]; then
-          git clone --depth 1 --branch "$$REPO_BRANCH" "$$REPO_URL" /tmp/gvn-clone
+          git -c credential.helper='' clone --depth 1 --branch "$$REPO_BRANCH" "$$REPO_URL" /tmp/gvn-clone
           cp -a /tmp/gvn-clone/. /workspace/
           rm -rf /tmp/gvn-clone
         else
           cd /workspace
-          git fetch origin "$$REPO_BRANCH"
+          git -c credential.helper='' fetch origin "$$REPO_BRANCH"
           git reset --hard "origin/$$REPO_BRANCH"
         fi
 
