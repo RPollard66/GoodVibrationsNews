@@ -25,8 +25,9 @@ services:
         fi
 
         if [ ! -d /workspace/.git ]; then
-          rm -rf /workspace/*
-          git clone --depth 1 --branch "$$REPO_BRANCH" "$$REPO_URL" /workspace
+          git clone --depth 1 --branch "$$REPO_BRANCH" "$$REPO_URL" /tmp/gvn-clone
+          cp -a /tmp/gvn-clone/. /workspace/
+          rm -rf /tmp/gvn-clone
         else
           cd /workspace
           git fetch origin "$$REPO_BRANCH"
