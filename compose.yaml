@@ -1,0 +1,71 @@
+services:
+  good-vibrations-news:
+    image: node:current-bookworm-slim
+    container_name: good-vibrations-news
+    pull_policy: always
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    environment:
+      REPO_URL: ${REPO_URL:-https://github.com/RPollard66/GoodVibrationsNews.git}
+      REPO_BRANCH: ${REPO_BRANCH:-main}
+      PORT: ${PORT:-4000}
+      HOST: 0.0.0.0
+      NODE_ENV: production
+    command:
+      - /bin/sh
+      - -lc
+      - |
+        set -eu
+
+        if ! command -v git >/dev/null 2>&1; then
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+          rm -rf /var/lib/apt/lists/*
+        fi
+
+        if [ ! -d /workspace/.git ]; then
+          rm -rf /workspace/*
+          git clone --depth 1 --branch "$$REPO_BRANCH" "$$REPO_URL" /workspace
+        else
+          cd /workspace
+          git fetch origin "$$REPO_BRANCH"
+          git reset --hard "origin/$$REPO_BRANCH"
+        fi
+
+        cd /workspace
+        npm ci --omit=dev
+        mkdir -p /workspace/data
+
+        exec node server.js
+    ports:
+      - "${PORT:-4000}:4000"
+    volumes:
+      - app_repo:/workspace
+      - app_data:/workspace/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: good-vibrations-watchtower
+    restart: unless-stopped
+    command:
+      - --interval
+      - "300"
+      - --label-enable
+      - --cleanup
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  app_repo:
+  app_data:
