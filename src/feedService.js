@@ -4,7 +4,6 @@ const { analyzeAndFilterArticles } = require("./analyzer");
 const {
   ensureDb,
   getSettings,
-  updateSettings,
   saveSnapshot,
   getLatestSnapshot
 } = require("./storage");
@@ -323,18 +322,6 @@ async function refreshArticles(force) {
   return payload;
 }
 
-async function updateTuning(partialSettings) {
-  ensureDb();
-  const settings = updateSettings(partialSettings);
-  cache.settings = settings;
-  return refreshArticles(true);
-}
-
-async function getTuning() {
-  ensureDb();
-  return getSettings();
-}
-
 async function getCachedArticles() {
   ensureDb();
 
@@ -368,7 +355,5 @@ async function getCachedArticles() {
 
 module.exports = {
   refreshArticles,
-  getCachedArticles,
-  getTuning,
-  updateTuning
+  getCachedArticles
 };

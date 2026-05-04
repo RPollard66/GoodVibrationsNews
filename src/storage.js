@@ -52,24 +52,6 @@ function getSettings() {
   return normalizeTuning({ ...DEFAULT_TUNING, ...current });
 }
 
-function updateSettings(partialSettings = {}) {
-  const conn = ensureDb();
-  const merged = normalizeTuning({ ...getSettings(), ...partialSettings });
-  const now = new Date().toISOString();
-  const stmt = conn.prepare(
-    "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
-  );
-
-  const transaction = conn.transaction(() => {
-    Object.entries(merged).forEach(([key, value]) => {
-      stmt.run(key, String(value), now);
-    });
-  });
-
-  transaction();
-  return merged;
-}
-
 function saveSnapshot(payload) {
   const conn = ensureDb();
   conn
@@ -102,7 +84,6 @@ function getLatestSnapshot() {
 module.exports = {
   ensureDb,
   getSettings,
-  updateSettings,
   saveSnapshot,
   getLatestSnapshot
 };

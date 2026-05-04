@@ -1320,33 +1320,6 @@ function scoreArticle(article, tuning) {
   };
 }
 
-function getCategoryDebug(article) {
-  const tuning = DEFAULT_TUNING;
-  const scored = scoreArticle(article || {}, tuning);
-
-  const titleText = cleanText(article?.title || "");
-  const bodyText = cleanText(`${article?.contentSnippet || ""} ${article?.content || ""}`);
-  const normalizedTitle = normalizeForKeywordMatch(titleText);
-  const normalizedBody = normalizeForKeywordMatch(bodyText);
-  const categoryScores = scoreCategories(normalizedTitle, normalizedBody, article?.source);
-
-  return {
-    source: article?.source || "",
-    title: article?.title || "",
-    category: scored.category,
-    existingCategory: article?.category || null,
-    categoryScores,
-    categoryStrongHits: scored.categoryStrongHits,
-    politicsHits: scored.politicsHits,
-    hardNegHits: scored.hardNegHits,
-    softNegHits: scored.softNegHits,
-    positivityScore: scored.positivityScore,
-    rankScore: scored.rankScore,
-    isPositive: scored.isPositive,
-    preview: `${titleText} — ${bodyText}`.slice(0, 240)
-  };
-}
-
 function analyzeAndFilterArticles(articles, tuningInput = DEFAULT_TUNING) {
   const tuning = normalizeTuning(tuningInput);
 
@@ -1365,8 +1338,6 @@ function analyzeAndFilterArticles(articles, tuningInput = DEFAULT_TUNING) {
 
 module.exports = {
   DEFAULT_TUNING,
-  KEYWORDS,
   normalizeTuning,
-  analyzeAndFilterArticles,
-  getCategoryDebug
+  analyzeAndFilterArticles
 };
