@@ -158,7 +158,14 @@ const FEEDS = [
   { label: "Earthly Blog", url: "https://earthly.dev/blog/rss.xml" },
   { label: "Cloudflare Blog", url: "https://blog.cloudflare.com/rss/" },
   { label: "Kubernetes Blog", url: "https://kubernetes.io/feed.xml" },
-  { label: "Landchad", url: "https://landchad.net/rss.xml" }
+  { label: "Landchad", url: "https://landchad.net/rss.xml" },
+  // Product feeds (things I personally use / care about)
+  { label: "Jellyfin Blog", url: "https://jellyfin.org/index.xml" },
+  { label: "Linux Mint Blog", url: "https://blog.linuxmint.com/?feed=rss2" },
+  { label: "Home Assistant Blog", url: "https://www.home-assistant.io/atom.xml" },
+  { label: "Pi-hole Blog", url: "https://pi-hole.net/blog/feed/" },
+  { label: "Nextcloud Blog", url: "https://nextcloud.com/blog/feed/" },
+  { label: "Prusa Blog", url: "https://blog.prusa3d.com/feed/" }
 ];
 
 const cache = {

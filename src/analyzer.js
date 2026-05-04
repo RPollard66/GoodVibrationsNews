@@ -435,7 +435,14 @@ const KEYWORDS = {
         "zerotier",
         "nomad cluster",
         "k3s",
-        "k8s cluster"
+        "k8s cluster",
+        // Desktop Linux distros (hobbyist / homelab adjacent)
+        "linux mint",
+        "cinnamon desktop",
+        "pop!_os",
+        "pop os",
+        "endeavouros",
+        "manjaro"
       ],
       weak: [
         "maker",
@@ -974,7 +981,14 @@ const KEYWORDS = {
       "linuxserver",
       "docker blog",
       "earthly",
-      "landchad"
+      "landchad",
+      "jellyfin",
+      "linux mint",
+      "home assistant",
+      "pi-hole",
+      "pihole",
+      "nextcloud",
+      "prusa"
     ],
     gaming: ["polygon", "kotaku", "ign", "rock paper", "eurogamer", "pc gamer"],
     science: ["nature", "scientific american", "new scientist", "phys.org", "sciencealert"]
