@@ -334,6 +334,25 @@ function normalizeTuning(tuning = {}) {
   };
 }
 
+function hasCouponCodeContext(value) {
+  const text = String(value || "").toLowerCase();
+  if (!text) return false;
+
+  const couponPatterns = [
+    /\b(coupon|promo|discount|voucher|offer|deal)\s+code\b/,
+    /\bcode\s+at\s+checkout\b/,
+    /\buse\s+code\b/,
+    /\benter\s+code\b/,
+    /\bapply\s+code\b/,
+    /\bredeem\s+code\b/,
+    /\bpromo\b.*\bcheckout\b/,
+    /\b(save|off)\s+\d{1,3}%\b/,
+    /\bfree\s+shipping\b/
+  ];
+
+  return couponPatterns.some((pattern) => pattern.test(text));
+}
+
 function scoreArticle(article, tuning) {
   const combined = cleanText(`${article.title} ${article.contentSnippet} ${article.content}`);
   const sentimentResult = sentiment.analyze(combined);
@@ -343,6 +362,7 @@ function scoreArticle(article, tuning) {
   const positiveHits = countKeywordHits(combined, POSITIVE_KEYWORDS);
   const negativeHits = countKeywordHits(combined, NEGATIVE_KEYWORDS);
   const hasPolitics = politicsHits > 0;
+  const hasCouponCodePromo = hasCouponCodeContext(combined);
 
   // Hard floor: discard content that trends negative even before tuning.
   const isHardNegative = sentimentResult.comparative < -0.02 || negativeHits > 0;
@@ -361,6 +381,7 @@ function scoreArticle(article, tuning) {
     aiScore: aiHits,
     politicsHits,
     hasPolitics,
+    hasCouponCodePromo,
     isHardNegative,
     rankScore,
     positivityScore,
@@ -393,6 +414,7 @@ function analyzeAndFilterArticles(articles, tuningInput = DEFAULT_TUNING) {
   return articles
     .map((article) => scoreArticle(article, tuning))
     .filter((article) => !article.hasPolitics)
+    .filter((article) => !article.hasCouponCodePromo)
     .filter((article) => !article.isHardNegative)
     .filter((article) => article.isPositive)
     .sort((a, b) => {
