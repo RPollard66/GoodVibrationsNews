@@ -6,6 +6,7 @@ const {
   getSettings,
   getFeeds,
   getMaxItemsPerFeed,
+  getMaxTotalArticles,
   saveSnapshot,
   getLatestSnapshot
 } = require("./storage");
@@ -183,6 +184,7 @@ async function refreshArticles(force) {
   const settings = getSettings();
   const feeds = getFeeds();
   const maxItemsPerFeed = getMaxItemsPerFeed();
+  const maxTotalArticles = getMaxTotalArticles();
 
   const settled = await Promise.all(feeds.map((feed) => fetchFeed(feed, maxItemsPerFeed)));
   const allArticles = settled.flatMap((entry) => entry.items);
@@ -194,7 +196,7 @@ async function refreshArticles(force) {
       const tb = b.pubDate ? new Date(b.pubDate).getTime() : 0;
       return tb - ta;
     })
-    .slice(0, 120);
+    .slice(0, maxTotalArticles);
 
   cache.updatedAt = new Date().toISOString();
   cache.articles = analyzed;

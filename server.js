@@ -1,7 +1,7 @@
 const express = require("express");
 const path = require("path");
 const { getCachedArticles, refreshArticles, invalidateCache } = require("./src/feedService");
-const { ensureDb, getFeeds, addFeed, removeFeed, getMaxItemsPerFeed, setMaxItemsPerFeed, MAX_ITEMS_PER_FEED_MIN, MAX_ITEMS_PER_FEED_MAX } = require("./src/storage");
+const { ensureDb, getFeeds, addFeed, removeFeed, getMaxItemsPerFeed, setMaxItemsPerFeed, MAX_ITEMS_PER_FEED_MIN, MAX_ITEMS_PER_FEED_MAX, getMaxTotalArticles, setMaxTotalArticles, MAX_TOTAL_ARTICLES_MIN, MAX_TOTAL_ARTICLES_MAX } = require("./src/storage");
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -29,7 +29,9 @@ app.get("/api/feeds", (_req, res) => {
     res.json({
       feeds: getFeeds(),
       maxItemsPerFeed: getMaxItemsPerFeed(),
-      maxItemsPerFeedRange: { min: MAX_ITEMS_PER_FEED_MIN, max: MAX_ITEMS_PER_FEED_MAX }
+      maxItemsPerFeedRange: { min: MAX_ITEMS_PER_FEED_MIN, max: MAX_ITEMS_PER_FEED_MAX },
+      maxTotalArticles: getMaxTotalArticles(),
+      maxTotalArticlesRange: { min: MAX_TOTAL_ARTICLES_MIN, max: MAX_TOTAL_ARTICLES_MAX }
     });
   } catch (error) {
     console.error("Failed to list feeds", error);
@@ -91,6 +93,27 @@ app.post("/api/settings/max-items", (req, res) => {
     res.json({ maxItemsPerFeed: saved });
   } catch (error) {
     console.error("Failed to update max items", error);
+    res.status(500).json({ error: "Failed to update setting." });
+  }
+});
+
+app.post("/api/settings/max-total-articles", (req, res) => {
+  const { value } = req.body || {};
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < MAX_TOTAL_ARTICLES_MIN || n > MAX_TOTAL_ARTICLES_MAX) {
+    return res.status(400).json({
+      error: `value must be a number between ${MAX_TOTAL_ARTICLES_MIN} and ${MAX_TOTAL_ARTICLES_MAX}`
+    });
+  }
+  try {
+    const saved = setMaxTotalArticles(n);
+    invalidateCache();
+    refreshArticles(true).catch((error) => {
+      console.error("Refresh after max-total-articles change failed", error);
+    });
+    res.json({ maxTotalArticles: saved });
+  } catch (error) {
+    console.error("Failed to update max total articles", error);
     res.status(500).json({ error: "Failed to update setting." });
   }
 });

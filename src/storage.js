@@ -84,10 +84,21 @@ const MAX_ITEMS_PER_FEED_DEFAULT = 25;
 const MAX_ITEMS_PER_FEED_MIN = 25;
 const MAX_ITEMS_PER_FEED_MAX = 100;
 
+const MAX_TOTAL_ARTICLES_KEY = "maxTotalArticles";
+const MAX_TOTAL_ARTICLES_DEFAULT = 120;
+const MAX_TOTAL_ARTICLES_MIN = 50;
+const MAX_TOTAL_ARTICLES_MAX = 500;
+
 function clampMaxItemsPerFeed(value) {
   const n = Math.round(Number(value));
   if (!Number.isFinite(n)) return MAX_ITEMS_PER_FEED_DEFAULT;
   return Math.max(MAX_ITEMS_PER_FEED_MIN, Math.min(MAX_ITEMS_PER_FEED_MAX, n));
+}
+
+function clampMaxTotalArticles(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return MAX_TOTAL_ARTICLES_DEFAULT;
+  return Math.max(MAX_TOTAL_ARTICLES_MIN, Math.min(MAX_TOTAL_ARTICLES_MAX, n));
 }
 
 function getMaxItemsPerFeed() {
@@ -107,6 +118,26 @@ function setMaxItemsPerFeed(value) {
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
     )
     .run(MAX_ITEMS_PER_FEED_KEY, String(clamped), now);
+  return clamped;
+}
+
+function getMaxTotalArticles() {
+  const conn = ensureDb();
+  const row = conn.prepare("SELECT value FROM settings WHERE key = ?").get(MAX_TOTAL_ARTICLES_KEY);
+  if (!row) return MAX_TOTAL_ARTICLES_DEFAULT;
+  return clampMaxTotalArticles(row.value);
+}
+
+function setMaxTotalArticles(value) {
+  const conn = ensureDb();
+  const clamped = clampMaxTotalArticles(value);
+  const now = new Date().toISOString();
+  conn
+    .prepare(
+      "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) " +
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
+    )
+    .run(MAX_TOTAL_ARTICLES_KEY, String(clamped), now);
   return clamped;
 }
 
@@ -185,9 +216,14 @@ module.exports = {
   removeFeed,
   getMaxItemsPerFeed,
   setMaxItemsPerFeed,
+  getMaxTotalArticles,
+  setMaxTotalArticles,
   MAX_ITEMS_PER_FEED_MIN,
   MAX_ITEMS_PER_FEED_MAX,
   MAX_ITEMS_PER_FEED_DEFAULT,
+  MAX_TOTAL_ARTICLES_MIN,
+  MAX_TOTAL_ARTICLES_MAX,
+  MAX_TOTAL_ARTICLES_DEFAULT,
   saveSnapshot,
   getLatestSnapshot
 };
