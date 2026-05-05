@@ -28,6 +28,10 @@
         <p class="subtitle">
           AI-first headlines across world, science, android, and gaming RSS feeds.
         </p>
+        <div class="hero-actions">
+          <button id="manageFeedsBtn" class="ghost-btn" type="button">Manage feeds</button>
+          <button id="refreshNowBtn" class="ghost-btn" type="button">Refresh now</button>
+        </div>
       </header>
 
       <section id="newsView" class="app-view">
@@ -46,6 +50,26 @@
           <div id="statusLine" class="status-line">Fetching stories...</div>
           <div id="articles" class="card-grid"></div>
         </section>
+      </section>
+
+      <section id="feedsView" class="app-view" hidden>
+        <h2 class="section-title">Manage feeds</h2>
+        <p class="status-line">Add or remove RSS feeds. Changes are saved and a refresh runs immediately.</p>
+
+        <form id="maxItemsForm" class="max-items-form">
+          <label for="maxItemsInput">Max items per feed</label>
+          <input type="number" id="maxItemsInput" min="1" max="100" step="1" />
+          <button type="submit" class="ghost-btn">Save</button>
+          <span id="maxItemsHint" class="max-items-hint"></span>
+        </form>
+
+        <form id="addFeedForm" class="add-feed-form">
+          <input type="text" id="feedLabelInput" placeholder="Label (e.g. Ars Technica)" required />
+          <input type="url" id="feedUrlInput" placeholder="https://example.com/feed" required />
+          <button type="submit" class="ghost-btn">Add feed</button>
+        </form>
+        <div id="feedsStatus" class="status-line"></div>
+        <ul id="feedsList" class="feeds-list"></ul>
       </section>
     </main>
 

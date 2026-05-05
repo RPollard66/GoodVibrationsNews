@@ -4,6 +4,8 @@ const { analyzeAndFilterArticles } = require("./analyzer");
 const {
   ensureDb,
   getSettings,
+  getFeeds,
+  getMaxItemsPerFeed,
   saveSnapshot,
   getLatestSnapshot
 } = require("./storage");
@@ -14,8 +16,6 @@ const parser = new Parser({
     "User-Agent": "GoodVibrationsNews/1.0"
   }
 });
-
-const MAX_ITEMS_PER_FEED = 25;
 
 function sanitizeFeedText(value) {
   return String(value || "")
@@ -57,121 +57,6 @@ function pickSnippet(item) {
   return "";
 }
 
-const FEEDS = [
-  { label: "WIRED", url: "https://www.wired.com/feed/rss" },
-  { label: "Phys.org", url: "https://phys.org/rss-feed/" },
-  { label: "Quanta Magazine", url: "https://www.quantamagazine.org/feed/" },
-  { label: "Arduino", url: "https://blog.arduino.cc/feed/" },
-  { label: "Hackaday", url: "https://hackaday.com/blog/feed/" },
-  { label: "Adafruit", url: "https://blog.adafruit.com/feed/" },
-  { label: "Make", url: "https://makezine.com/feed/" },
-  { label: "MIT Tech Review", url: "https://www.technologyreview.com/feed/" },
-  { label: "VentureBeat AI", url: "https://venturebeat.com/category/ai/feed/" },
-  { label: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/index" },
-  { label: "The Verge", url: "https://www.theverge.com/rss/index.xml" },
-  { label: "Engadget", url: "https://www.engadget.com/rss.xml" },
-  { label: "IGN", url: "https://feeds.ign.com/ign/all" },
-  { label: "GameSpot", url: "https://www.gamespot.com/feeds/mashup/" },
-  { label: "Eurogamer", url: "https://www.eurogamer.net/feed" },
-  { label: "Good News Network", url: "https://www.goodnewsnetwork.org/feed/" },
-  { label: "Positive News", url: "https://www.positive.news/feed/" },
-  // Science & Startups
-  { label: "ScienceDaily All News", url: "https://www.sciencedaily.com/rss/all.xml" },
-  { label: "ScienceDaily Top Science", url: "https://www.sciencedaily.com/rss/top/science.xml" },
-  { label: "ScienceDaily Environment", url: "https://www.sciencedaily.com/rss/earth_climate.xml" },
-  { label: "Science (AAAS)", url: "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science" },
-  { label: "ScienceAlert", url: "https://www.sciencealert.com/rss" },
-  { label: "Science News", url: "https://www.sciencenews.org/feed" },
-  { label: "Nature News", url: "http://feeds.nature.com/nature/rss/current" },
-  { label: "Live Science", url: "https://www.livescience.com/feeds/all" },
-  { label: "Space.com", url: "https://www.space.com/feeds/all" },
-  { label: "EOS (AGU)", url: "https://eos.org/feed" },
-  { label: "PLOS Biology", url: "https://journals.plos.org/plosbiology/feed/atom" },
-  { label: "Phys.org Physics", url: "https://phys.org/rss-feed/physics-news/" },
-  { label: "Phys.org Chemistry", url: "https://phys.org/rss-feed/chemistry-news/" },
-  // Android feeds
-  { label: "Android Authority", url: "https://www.androidauthority.com/feed/" },
-  { label: "Android Police", url: "https://www.androidpolice.com/feed/" },
-  { label: "9to5Google Android", url: "https://9to5google.com/guides/android/feed/" },
-  { label: "Android Central", url: "https://www.androidcentral.com/rss.xml" },
-  { label: "Android Headlines", url: "https://www.androidheadlines.com/feed/" },
-  { label: "Droid Life", url: "https://www.droid-life.com/feed/" },
-  { label: "Phandroid", url: "https://phandroid.com/feed/" },
-  { label: "Talk Android", url: "https://www.talkandroid.com/feed/" },
-  { label: "TechCrunch", url: "https://techcrunch.com/feed/" },
-  { label: "Product Hunt", url: "http://www.producthunt.com/feed" },
-  { label: "Hacker News", url: "http://news.ycombinator.com/rss" },
-  { label: "SlashGear", url: "https://www.slashgear.com/feed" },
-  // Engineering Blogs
-  { label: "The Pragmatic Engineer", url: "https://blog.pragmaticengineer.com/rss/" },
-  { label: "Stripe Blog", url: "https://stripe.com/blog/feed.rss" },
-  { label: "Science Magazine News", url: "https://www.science.org/rss/news_current.xml" },
-  { label: "NASA Breaking News", url: "https://www.nasa.gov/rss/dyn/breaking_news.rss" },
-  { label: "GitHub Engineering", url: "http://githubengineering.com/atom.xml" },
-  { label: "Cloudflare Blog", url: "https://blog.cloudflare.com/rss/" },
-  { label: "Dropbox Tech", url: "https://dropbox.tech/feed" },
-  { label: "Slack Engineering", url: "https://slack.engineering/feed" },
-  { label: "Spotify Engineering", url: "https://engineering.atspotify.com/feed/" },
-  // Machine Learning & AI
-  { label: "DeepMind", url: "https://deepmind.com/blog/feed/basic/" },
-  { label: "OpenAI News", url: "https://openai.com/news/rss.xml" },
-  { label: "Google AI Blog", url: "http://googleresearch.blogspot.com/atom.xml" },
-  { label: "Towards Data Science", url: "https://towardsdatascience.com/feed" },
-  { label: "PyTorch", url: "https://pytorch.org/feed" },
-  { label: "MIT Research News", url: "https://news.mit.edu/rss/research" },
-  { label: "Jay Alammar", url: "https://jalammar.github.io/feed.xml" },
-  { label: "ML@CMU", url: "https://blog.ml.cmu.edu/feed/" },
-  // Raspberry Pi & Maker-specific feeds
-  { label: "Raspberry Pi Blog", url: "https://www.raspberrypi.org/blog/feed/" },
-  { label: "Raspberry Pi News", url: "https://www.raspberrypi.com/news/feed/" },
-  { label: "Jeff Geerling Blog", url: "https://www.jeffgeerling.com/blog.xml" },
-  { label: "The Pi Hut", url: "https://thepihut.com/blogs/raspberry-pi-roundup.atom" },
-  { label: "Hackaday Raspberry Pi", url: "https://hackaday.com/category/raspberry-pi-2/feed/" },
-  { label: "pi3g.com Blog", url: "https://pi3g.com/feed/" },
-  { label: "Pi My Life Up", url: "https://pimylifeup.com/category/projects/feed/" },
-  { label: "RaspberryTips", url: "https://raspberrytips.com/feed/" },
-  { label: "Alex Ellis' Blog", url: "https://blog.alexellis.io/rss/" },
-  { label: "peppe8o", url: "https://peppe8o.com/feed/" },
-  { label: "Stephen Smith Raspberry Pi", url: "https://smist08.wordpress.com/tag/raspberry-pi/feed/" },
-  { label: "Raspberry Pi Spy", url: "https://www.raspberrypi-spy.co.uk/feed/" },
-  { label: "Pimoroni", url: "https://blog.pimoroni.com/rss/" },
-  { label: "Raspberry PiPod Blog", url: "https://www.recantha.co.uk/blog/?feed=rss2" },
-  { label: "Circuit Specialists Raspberry Pi", url: "https://www.circuitspecialists.com/blog/category/single-board-computers/raspberry-pi/feed/" },
-  { label: "SwitchDoc Labs", url: "https://www.switchdoc.com/category/raspberrypicat/feed/" },
-  { label: "Ozzmaker", url: "https://ozzmaker.com/category/raspberry-pi/feed/" },
-  { label: "PiCockpit", url: "https://picockpit.com/raspberry-pi/feed/" },
-  { label: "Cat Lamin", url: "https://catlamin.com/category/education/raspberry-pi/feed/" },
-  { label: "Embedded Lab", url: "https://embedded-lab.com/blog/category/raspberry-pie/feed/" },
-  { label: "The Rantings of a Madman", url: "https://feeds.feedburner.com/TheRantingsAndRavingsOfAMadman" },
-  { label: "FactoryForward", url: "https://www.factoryforward.com/category/raspberry-pi/feed/" },
-  { label: "Raspberry Pi Tutorials", url: "https://www.raspberrypi.com/tutorials/feed/" },
-  { label: "OpenSource.com Raspberry Pi", url: "https://opensource.com/taxonomy/term/7974/feed?intcmp=701f2000000h4RcAAI&src=raspberry_pi_resource_menu4" },
-  // Homelab / self-hosted / Docker feeds
-  { label: "Docker Blog", url: "https://www.docker.com/blog/feed/" },
-  { label: "selfh.st", url: "https://selfh.st/rss/" },
-  { label: "Noted (Homelab)", url: "https://noted.lol/rss/" },
-  { label: "LinuxServer.io", url: "https://www.linuxserver.io/blog/feed.xml" },
-  { label: "Earthly Blog", url: "https://earthly.dev/blog/rss.xml" },
-  { label: "Cloudflare Blog", url: "https://blog.cloudflare.com/rss/" },
-  { label: "Kubernetes Blog", url: "https://kubernetes.io/feed.xml" },
-  { label: "Landchad", url: "https://landchad.net/rss.xml" },
-  // Product feeds (things I personally use / care about)
-  { label: "Jellyfin Blog", url: "https://jellyfin.org/index.xml" },
-  { label: "Linux Mint Blog", url: "https://blog.linuxmint.com/?feed=rss2" },
-  { label: "Home Assistant Blog", url: "https://www.home-assistant.io/atom.xml" },
-  { label: "Pi-hole Blog", url: "https://pi-hole.net/blog/feed/" },
-  { label: "Nextcloud Blog", url: "https://nextcloud.com/blog/feed/" },
-  { label: "Prusa Blog", url: "https://blog.prusa3d.com/feed/" },
-  // Personal electric mobility (ebikes, scooters, EUCs, eboards)
-  { label: "Electrek", url: "https://electrek.co/feed/" },
-  { label: "Electric Bike Report", url: "https://www.electricbikereport.com/feed/" },
-  // Birding / ornithology / field recording
-  { label: "Cornell Lab — All About Birds", url: "https://www.allaboutbirds.org/news/feed/" },
-  { label: "Audubon", url: "https://www.audubon.org/rss.xml" },
-  // Weather (Tempest / personal weather stations)
-  { label: "WeatherFlow Blog", url: "https://blog.weatherflow.com/feed/" }
-];
-
 const cache = {
   updatedAt: null,
   articles: [],
@@ -179,9 +64,18 @@ const cache = {
   settings: null
 };
 
-const feedState = new Map(
-  FEEDS.map((feed) => [feed.url, { failures: 0, nextAllowedAt: 0 }])
-);
+// Per-feed-URL backoff state. Entries are created lazily for whichever
+// feed URLs are currently configured in the database.
+const feedState = new Map();
+
+function getFeedState(url) {
+  let state = feedState.get(url);
+  if (!state) {
+    state = { failures: 0, nextAllowedAt: 0 };
+    feedState.set(url, state);
+  }
+  return state;
+}
 
 function getBackoffMs(failures) {
   const maxMs = 60 * 60 * 1000;
@@ -189,8 +83,8 @@ function getBackoffMs(failures) {
   return Math.min(maxMs, baseMs * 2 ** Math.max(0, failures - 1));
 }
 
-async function fetchFeed(feedConfig) {
-  const state = feedState.get(feedConfig.url) || { failures: 0, nextAllowedAt: 0 };
+async function fetchFeed(feedConfig, maxItemsPerFeed) {
+  const state = getFeedState(feedConfig.url);
   const now = Date.now();
   if (now < state.nextAllowedAt) {
     return {
@@ -222,7 +116,7 @@ async function fetchFeed(feedConfig) {
 
   try {
     const feed = await parser.parseURL(feedConfig.url);
-    const items = (feed.items || []).slice(0, MAX_ITEMS_PER_FEED).map((item) => {
+    const items = (feed.items || []).slice(0, maxItemsPerFeed).map((item) => {
       const cleanedContent = sanitizeFeedText(item.content || item["content:encoded"] || item.summary || "");
       const cleanedSnippet = pickSnippet(item);
 
@@ -287,8 +181,10 @@ async function refreshArticles(force) {
   }
 
   const settings = getSettings();
+  const feeds = getFeeds();
+  const maxItemsPerFeed = getMaxItemsPerFeed();
 
-  const settled = await Promise.all(FEEDS.map((feed) => fetchFeed(feed)));
+  const settled = await Promise.all(feeds.map((feed) => fetchFeed(feed, maxItemsPerFeed)));
   const allArticles = settled.flatMap((entry) => entry.items);
   const feedStats = settled.map((entry) => entry.result);
 
@@ -350,7 +246,14 @@ async function getCachedArticles() {
   };
 }
 
+function invalidateCache() {
+  cache.updatedAt = null;
+  cache.articles = [];
+  cache.feedStats = [];
+}
+
 module.exports = {
   refreshArticles,
-  getCachedArticles
+  getCachedArticles,
+  invalidateCache
 };
