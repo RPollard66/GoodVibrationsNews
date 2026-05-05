@@ -85,9 +85,9 @@ const MAX_ITEMS_PER_FEED_MIN = 25;
 const MAX_ITEMS_PER_FEED_MAX = 100;
 
 const MAX_TOTAL_ARTICLES_KEY = "maxTotalArticles";
-const MAX_TOTAL_ARTICLES_DEFAULT = 120;
-const MAX_TOTAL_ARTICLES_MIN = 50;
-const MAX_TOTAL_ARTICLES_MAX = 500;
+const MAX_TOTAL_ARTICLES_DEFAULT = 75;
+const MAX_TOTAL_ARTICLES_MIN = 25;
+const MAX_TOTAL_ARTICLES_MAX = 120;
 
 function clampMaxItemsPerFeed(value) {
   const n = Math.round(Number(value));
