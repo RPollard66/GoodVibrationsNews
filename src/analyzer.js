@@ -1000,8 +1000,14 @@ const KEYWORDS = {
     "zoox"
   ],
 
-  // Tesla allow-list — if any of these appear, the vehicle filter is bypassed.
-  teslaAllowlist: [
+  // Musk allow-list — if any of these appear, the vehicle filter is bypassed.
+  // Covers Elon Musk himself plus Tesla / SpaceX / xAI / Neuralink / Boring
+  // Co. / Starlink so interviews and cross-company stories aren't caught by
+  // the broader automotive filter.
+  muskAllowlist: [
+    "elon musk",
+    "musk interview",
+    // Tesla
     "tesla",
     "model s",
     "model 3",
@@ -1017,7 +1023,36 @@ const KEYWORDS = {
     "supercharger",
     "tesla bot",
     "optimus robot",
-    "elon musk"
+    "full self-driving",
+    "full self driving",
+    "tesla fsd",
+    // SpaceX
+    "spacex",
+    "space x",
+    "starship",
+    "super heavy",
+    "falcon 9",
+    "falcon heavy",
+    "dragon capsule",
+    "crew dragon",
+    "cargo dragon",
+    "raptor engine",
+    "starbase",
+    // Starlink
+    "starlink",
+    "starshield",
+    // xAI / Grok
+    "xai",
+    "x.ai",
+    "grok ai",
+    "grok chatbot",
+    "grok model",
+    "colossus supercomputer",
+    // Neuralink / Boring Co. / other Musk ventures
+    "neuralink",
+    "boring company",
+    "the boring company",
+    "hyperloop"
   ],
 
   // Hard politics — present anywhere → drop. "policy" / "regulation" are
@@ -1359,13 +1394,13 @@ function scoreNegativity(normalizedText) {
 function scoreVehicles(normalizedText) {
   const vehicleHits = countKeywordHits(normalizedText, KEYWORDS.vehicleTerms);
   if (vehicleHits === 0) {
-    return { vehicleHits: 0, hasTeslaContext: false, isNonTeslaVehicle: false };
+    return { vehicleHits: 0, hasMuskContext: false, isNonMuskVehicle: false };
   }
-  const teslaHits = countKeywordHits(normalizedText, KEYWORDS.teslaAllowlist);
+  const muskHits = countKeywordHits(normalizedText, KEYWORDS.muskAllowlist);
   return {
     vehicleHits,
-    hasTeslaContext: teslaHits > 0,
-    isNonTeslaVehicle: teslaHits === 0
+    hasMuskContext: muskHits > 0,
+    isNonMuskVehicle: muskHits === 0
   };
 }
 
@@ -1399,7 +1434,7 @@ function scoreArticle(article, tuning) {
 
   const politicsHits = scorePolitics(normalizedAll);
   const { hard: hardNegHits, soft: softNegHits } = scoreNegativity(normalizedAll);
-  const { isNonTeslaVehicle } = scoreVehicles(normalizedAll);
+  const { isNonMuskVehicle } = scoreVehicles(normalizedAll);
   const hasCouponCodePromo = hasCouponCodeContext(combinedText);
 
   const sentimentResult = sentiment.analyze(combinedText);
@@ -1446,7 +1481,7 @@ function scoreArticle(article, tuning) {
     hardNegHits,
     softNegHits,
     isHardNegative: hardNegHits > 0,
-    isNonTeslaVehicle,
+    isNonMuskVehicle,
     hasCouponCodePromo,
     positivityScore,
     isPositive,
@@ -1463,7 +1498,7 @@ function analyzeAndFilterArticles(articles, tuningInput = DEFAULT_TUNING) {
     .filter((article) => !article.hasCouponCodePromo)
     .filter((article) => !article.hasPolitics)
     .filter((article) => !article.isHardNegative)
-    .filter((article) => !article.isNonTeslaVehicle)
+    .filter((article) => !article.isNonMuskVehicle)
     .sort((a, b) => {
       if (b.rankScore !== a.rankScore) return b.rankScore - a.rankScore;
       if (b.aiScore !== a.aiScore) return b.aiScore - a.aiScore;
