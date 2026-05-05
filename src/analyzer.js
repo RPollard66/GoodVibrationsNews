@@ -900,6 +900,126 @@ const KEYWORDS = {
     "concerns"
   ],
 
+  // Vehicle / automotive terms. Articles matching any of these are dropped
+  // unless the article also mentions a Tesla allow-list term. This keeps
+  // Tesla coverage (and SpaceX-adjacent Elon stories that mention Tesla)
+  // while filtering out general car / auto-industry news.
+  vehicleTerms: [
+    "car",
+    "cars",
+    "sedan",
+    "suv",
+    "truck",
+    "pickup truck",
+    "minivan",
+    "automobile",
+    "automotive",
+    "auto industry",
+    "auto maker",
+    "automaker",
+    "automakers",
+    "vehicle",
+    "vehicles",
+    "ev",
+    "evs",
+    "electric vehicle",
+    "electric vehicles",
+    "electric car",
+    "electric cars",
+    "electric suv",
+    "electric truck",
+    "electric pickup",
+    "hybrid car",
+    "plug-in hybrid",
+    "phev",
+    "self-driving",
+    "self driving",
+    "autonomous vehicle",
+    "autonomous driving",
+    "robotaxi",
+    "robo-taxi",
+    "ford",
+    "gm",
+    "general motors",
+    "chevrolet",
+    "chevy",
+    "cadillac",
+    "buick",
+    "chrysler",
+    "dodge",
+    "jeep",
+    "ram trucks",
+    "stellantis",
+    "toyota",
+    "lexus",
+    "honda",
+    "acura",
+    "nissan",
+    "infiniti",
+    "mazda",
+    "subaru",
+    "mitsubishi",
+    "hyundai",
+    "kia",
+    "genesis motors",
+    "volkswagen",
+    "vw id",
+    "audi",
+    "porsche",
+    "bmw",
+    "mercedes-benz",
+    "mercedes benz",
+    "mini cooper",
+    "volvo cars",
+    "polestar",
+    "jaguar",
+    "land rover",
+    "range rover",
+    "ferrari",
+    "lamborghini",
+    "maserati",
+    "bugatti",
+    "bentley",
+    "rolls-royce",
+    "mclaren",
+    "aston martin",
+    "lotus cars",
+    "rivian",
+    "lucid motors",
+    "fisker",
+    "byd",
+    "nio",
+    "xpeng",
+    "li auto",
+    "zeekr",
+    "geely",
+    "great wall motors",
+    "vinfast",
+    "waymo",
+    "cruise automation",
+    "zoox"
+  ],
+
+  // Tesla allow-list — if any of these appear, the vehicle filter is bypassed.
+  teslaAllowlist: [
+    "tesla",
+    "model s",
+    "model 3",
+    "model x",
+    "model y",
+    "cybertruck",
+    "cybercab",
+    "cyber truck",
+    "tesla semi",
+    "tesla roadster",
+    "powerwall",
+    "megapack",
+    "supercharger",
+    "tesla bot",
+    "optimus robot",
+    "elon musk"
+  ],
+
   // Hard politics — present anywhere → drop. "policy" / "regulation" are
   // intentionally NOT here: too noisy in tech writing ("privacy policy",
   // "AI regulation", "cookie policy"). Real political articles will hit
@@ -1236,6 +1356,19 @@ function scoreNegativity(normalizedText) {
   };
 }
 
+function scoreVehicles(normalizedText) {
+  const vehicleHits = countKeywordHits(normalizedText, KEYWORDS.vehicleTerms);
+  if (vehicleHits === 0) {
+    return { vehicleHits: 0, hasTeslaContext: false, isNonTeslaVehicle: false };
+  }
+  const teslaHits = countKeywordHits(normalizedText, KEYWORDS.teslaAllowlist);
+  return {
+    vehicleHits,
+    hasTeslaContext: teslaHits > 0,
+    isNonTeslaVehicle: teslaHits === 0
+  };
+}
+
 function scorePositivity(normalizedText, sentimentComparative, tuning, softHits, categoryStrongHits) {
   const positiveHits = countKeywordHits(normalizedText, KEYWORDS.positiveBoost);
 
@@ -1266,6 +1399,7 @@ function scoreArticle(article, tuning) {
 
   const politicsHits = scorePolitics(normalizedAll);
   const { hard: hardNegHits, soft: softNegHits } = scoreNegativity(normalizedAll);
+  const { isNonTeslaVehicle } = scoreVehicles(normalizedAll);
   const hasCouponCodePromo = hasCouponCodeContext(combinedText);
 
   const sentimentResult = sentiment.analyze(combinedText);
@@ -1312,6 +1446,7 @@ function scoreArticle(article, tuning) {
     hardNegHits,
     softNegHits,
     isHardNegative: hardNegHits > 0,
+    isNonTeslaVehicle,
     hasCouponCodePromo,
     positivityScore,
     isPositive,
@@ -1328,6 +1463,7 @@ function analyzeAndFilterArticles(articles, tuningInput = DEFAULT_TUNING) {
     .filter((article) => !article.hasCouponCodePromo)
     .filter((article) => !article.hasPolitics)
     .filter((article) => !article.isHardNegative)
+    .filter((article) => !article.isNonTeslaVehicle)
     .sort((a, b) => {
       if (b.rankScore !== a.rankScore) return b.rankScore - a.rankScore;
       if (b.aiScore !== a.aiScore) return b.aiScore - a.aiScore;
