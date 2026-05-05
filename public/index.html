@@ -56,17 +56,9 @@
         <h2 class="section-title">Manage feeds</h2>
         <p class="status-line">Add or remove RSS feeds. Changes are saved and a refresh runs immediately.</p>
 
-        <form id="maxItemsForm" class="max-items-form">
-          <label for="maxItemsInput">Max items per feed</label>
-          <input type="number" id="maxItemsInput" min="1" max="100" step="1" />
-          <button type="submit" class="ghost-btn">Save</button>
-          <span id="maxItemsHint" class="max-items-hint"></span>
-        </form>
-
         <form id="maxTotalForm" class="max-items-form">
-          <label for="maxTotalInput">Max total articles</label>
-          <input type="number" id="maxTotalInput" min="50" max="500" step="1" />
-          <button type="submit" class="ghost-btn">Save</button>
+          <label for="maxTotalInput">Max articles: <span id="maxTotalValue">75</span></label>
+          <input type="range" id="maxTotalInput" min="25" max="120" step="1" value="75" />
           <span id="maxTotalHint" class="max-items-hint"></span>
         </form>
 

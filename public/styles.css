@@ -282,6 +282,12 @@ h1 {
   font-family: "IBM Plex Mono", monospace;
 }
 
+.max-items-form input[type="range"] {
+  flex: 1 1 200px;
+  min-width: 180px;
+  accent-color: var(--accent, #6ee7b7);
+}
+
 .max-items-hint {
   color: var(--muted);
   font-family: "IBM Plex Mono", monospace;

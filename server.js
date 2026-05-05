@@ -1,7 +1,7 @@
 const express = require("express");
 const path = require("path");
 const { getCachedArticles, refreshArticles, invalidateCache } = require("./src/feedService");
-const { ensureDb, getFeeds, addFeed, removeFeed, getMaxItemsPerFeed, setMaxItemsPerFeed, MAX_ITEMS_PER_FEED_MIN, MAX_ITEMS_PER_FEED_MAX, getMaxTotalArticles, setMaxTotalArticles, MAX_TOTAL_ARTICLES_MIN, MAX_TOTAL_ARTICLES_MAX } = require("./src/storage");
+const { ensureDb, getFeeds, addFeed, removeFeed, getMaxTotalArticles, setMaxTotalArticles, MAX_TOTAL_ARTICLES_MIN, MAX_TOTAL_ARTICLES_MAX } = require("./src/storage");
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -28,8 +28,6 @@ app.get("/api/feeds", (_req, res) => {
   try {
     res.json({
       feeds: getFeeds(),
-      maxItemsPerFeed: getMaxItemsPerFeed(),
-      maxItemsPerFeedRange: { min: MAX_ITEMS_PER_FEED_MIN, max: MAX_ITEMS_PER_FEED_MAX },
       maxTotalArticles: getMaxTotalArticles(),
       maxTotalArticlesRange: { min: MAX_TOTAL_ARTICLES_MIN, max: MAX_TOTAL_ARTICLES_MAX }
     });
@@ -73,27 +71,6 @@ app.delete("/api/feeds/:id", (req, res) => {
   } catch (error) {
     console.error("Failed to remove feed", error);
     res.status(500).json({ error: "Failed to remove feed." });
-  }
-});
-
-app.post("/api/settings/max-items", (req, res) => {
-  const { value } = req.body || {};
-  const n = Number(value);
-  if (!Number.isFinite(n) || n < MAX_ITEMS_PER_FEED_MIN || n > MAX_ITEMS_PER_FEED_MAX) {
-    return res.status(400).json({
-      error: `value must be a number between ${MAX_ITEMS_PER_FEED_MIN} and ${MAX_ITEMS_PER_FEED_MAX}`
-    });
-  }
-  try {
-    const saved = setMaxItemsPerFeed(n);
-    invalidateCache();
-    refreshArticles(true).catch((error) => {
-      console.error("Refresh after max-items change failed", error);
-    });
-    res.json({ maxItemsPerFeed: saved });
-  } catch (error) {
-    console.error("Failed to update max items", error);
-    res.status(500).json({ error: "Failed to update setting." });
   }
 });
 

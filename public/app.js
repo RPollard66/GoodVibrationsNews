@@ -16,12 +16,10 @@ const feedsStatus = document.getElementById("feedsStatus");
 const addFeedForm = document.getElementById("addFeedForm");
 const feedLabelInput = document.getElementById("feedLabelInput");
 const feedUrlInput = document.getElementById("feedUrlInput");
-const maxItemsForm = document.getElementById("maxItemsForm");
-const maxItemsInput = document.getElementById("maxItemsInput");
-const maxItemsHint = document.getElementById("maxItemsHint");
 const maxTotalForm = document.getElementById("maxTotalForm");
 const maxTotalInput = document.getElementById("maxTotalInput");
 const maxTotalHint = document.getElementById("maxTotalHint");
+const maxTotalValue = document.getElementById("maxTotalValue");
 
 function formatDate(value) {
   if (!value) return "Unknown";
@@ -110,24 +108,17 @@ async function loadFeeds() {
   try {
     const response = await fetch("/api/feeds");
     if (!response.ok) throw new Error(`Status ${response.status}`);
-    const { feeds = [], maxItemsPerFeed, maxItemsPerFeedRange, maxTotalArticles, maxTotalArticlesRange } = await response.json();
+    const { feeds = [], maxTotalArticles, maxTotalArticlesRange } = await response.json();
     feedsStatus.textContent = `${feeds.length} feeds configured`;
 
-    if (typeof maxItemsPerFeed === "number") {
-      maxItemsInput.value = String(maxItemsPerFeed);
-    }
-    if (maxItemsPerFeedRange) {
-      maxItemsInput.min = String(maxItemsPerFeedRange.min);
-      maxItemsInput.max = String(maxItemsPerFeedRange.max);
-      maxItemsHint.textContent = `(allowed: ${maxItemsPerFeedRange.min}–${maxItemsPerFeedRange.max})`;
-    }
-    if (typeof maxTotalArticles === "number") {
-      maxTotalInput.value = String(maxTotalArticles);
-    }
     if (maxTotalArticlesRange) {
       maxTotalInput.min = String(maxTotalArticlesRange.min);
       maxTotalInput.max = String(maxTotalArticlesRange.max);
       maxTotalHint.textContent = `(allowed: ${maxTotalArticlesRange.min}–${maxTotalArticlesRange.max})`;
+    }
+    if (typeof maxTotalArticles === "number") {
+      maxTotalInput.value = String(maxTotalArticles);
+      maxTotalValue.textContent = String(maxTotalArticles);
     }
 
     feeds.forEach((feed) => {
@@ -208,29 +199,11 @@ manageFeedsBtn.addEventListener("click", () => {
   showFeedsView(feedsView.hidden);
 });
 
-maxItemsForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const value = Number(maxItemsInput.value);
-  if (!Number.isFinite(value)) return;
-
-  feedsStatus.textContent = "Saving...";
-  try {
-    const response = await fetch("/api/settings/max-items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ value })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `Status ${response.status}`);
-    feedsStatus.textContent = `Max items per feed set to ${data.maxItemsPerFeed}. Refreshing...`;
-    loadArticles().catch(() => {});
-  } catch (error) {
-    feedsStatus.textContent = `Failed to save: ${error.message}`;
-  }
+maxTotalInput.addEventListener("input", () => {
+  maxTotalValue.textContent = maxTotalInput.value;
 });
 
-maxTotalForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+maxTotalInput.addEventListener("change", async () => {
   const value = Number(maxTotalInput.value);
   if (!Number.isFinite(value)) return;
 
@@ -243,11 +216,15 @@ maxTotalForm.addEventListener("submit", async (event) => {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `Status ${response.status}`);
-    feedsStatus.textContent = `Max total articles set to ${data.maxTotalArticles}. Refreshing...`;
+    feedsStatus.textContent = `Max articles set to ${data.maxTotalArticles}. Refreshing...`;
     loadArticles().catch(() => {});
   } catch (error) {
     feedsStatus.textContent = `Failed to save: ${error.message}`;
   }
+});
+
+maxTotalForm.addEventListener("submit", (event) => {
+  event.preventDefault();
 });
 
 refreshNowBtn.addEventListener("click", async () => {

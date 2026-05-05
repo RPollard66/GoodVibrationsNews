@@ -5,7 +5,6 @@ const {
   ensureDb,
   getSettings,
   getFeeds,
-  getMaxItemsPerFeed,
   getMaxTotalArticles,
   saveSnapshot,
   getLatestSnapshot
@@ -183,10 +182,9 @@ async function refreshArticles(force) {
 
   const settings = getSettings();
   const feeds = getFeeds();
-  const maxItemsPerFeed = getMaxItemsPerFeed();
   const maxTotalArticles = getMaxTotalArticles();
 
-  const settled = await Promise.all(feeds.map((feed) => fetchFeed(feed, maxItemsPerFeed)));
+  const settled = await Promise.all(feeds.map((feed) => fetchFeed(feed, maxTotalArticles)));
   const allArticles = settled.flatMap((entry) => entry.items);
   const feedStats = settled.map((entry) => entry.result);
 
