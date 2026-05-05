@@ -336,6 +336,16 @@ const KEYWORDS = {
         // Radio / wireless
         "ham radio",
         "amateur radio",
+        "shortwave radio",
+        "shortwave listening",
+        "shortwave broadcast",
+        "shortwave receiver",
+        "shortwave transmitter",
+        "shortwave antenna",
+        "qsl card",
+        "numbers station",
+        "pirate radio",
+        "wwv time signal",
         "software defined radio",
         "lorawan",
         "meshtastic",
@@ -515,6 +525,10 @@ const KEYWORDS = {
         "servo",
         "lora",
         "sdr",
+        "shortwave",
+        "swl",
+        "hf radio",
+        "qsl",
         "iot",
         "mqtt",
         "zigbee",
@@ -1435,6 +1449,8 @@ function scoreArticle(article, tuning) {
   const politicsHits = scorePolitics(normalizedAll);
   const { hard: hardNegHits, soft: softNegHits } = scoreNegativity(normalizedAll);
   const { isNonMuskVehicle } = scoreVehicles(normalizedAll);
+  const muskHits = countKeywordHits(normalizedAll, KEYWORDS.muskAllowlist);
+  const hasMuskContext = muskHits > 0;
   const hasCouponCodePromo = hasCouponCodeContext(combinedText);
 
   const sentimentResult = sentiment.analyze(combinedText);
@@ -1462,13 +1478,15 @@ function scoreArticle(article, tuning) {
     positivityScore > tuning.positivityThreshold ||
     isStrongCategoryMatch ||
     isClearCategoryHit ||
-    isCyberContext;
+    isCyberContext ||
+    hasMuskContext;
 
   const aiHits = categoryScores.ai.strongHits + categoryScores.ai.weakHits;
   const rankScore =
     aiHits * tuning.aiWeight +
     positivityScore +
-    Math.min(categoryScore, 30) * 0.05;
+    Math.min(categoryScore, 30) * 0.05 +
+    Math.min(muskHits, 4) * 1.5;
 
   return {
     ...article,
