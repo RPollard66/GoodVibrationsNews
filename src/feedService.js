@@ -188,13 +188,15 @@ async function refreshArticles(force) {
   const allArticles = settled.flatMap((entry) => entry.items);
   const feedStats = settled.map((entry) => entry.result);
 
+  // analyzeAndFilterArticles already sorts by rankScore desc — take the top
+  // N by rank, then re-sort that subset by publication date for display.
   const analyzed = analyzeAndFilterArticles(dedupeArticles(allArticles), settings)
+    .slice(0, maxTotalArticles)
     .sort((a, b) => {
       const ta = a.pubDate ? new Date(a.pubDate).getTime() : 0;
       const tb = b.pubDate ? new Date(b.pubDate).getTime() : 0;
       return tb - ta;
-    })
-    .slice(0, maxTotalArticles);
+    });
 
   cache.updatedAt = new Date().toISOString();
   cache.articles = analyzed;
