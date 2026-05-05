@@ -107,7 +107,12 @@ const DEFAULT_FEEDS = [
   { label: "Cornell Lab — All About Birds", url: "https://www.allaboutbirds.org/news/feed/" },
   { label: "Audubon", url: "https://www.audubon.org/rss.xml" },
   // Weather
-  { label: "WeatherFlow Blog", url: "https://blog.weatherflow.com/feed/" }
+  { label: "WeatherFlow Blog", url: "https://blog.weatherflow.com/feed/" },
+  // Radio / shortwave / amateur
+  { label: "The SWLing Post", url: "https://swling.com/blog/feed/" },
+  { label: "AmateurRadio.com", url: "https://www.amateurradio.com/feed/" },
+  { label: "Hackaday Radio Hacks", url: "https://hackaday.com/category/radio-hacks/feed/" },
+  { label: "QRPer", url: "https://qrper.com/feed/" }
 ];
 
 module.exports = { DEFAULT_FEEDS };

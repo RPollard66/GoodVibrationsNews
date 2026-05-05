@@ -1449,8 +1449,39 @@ function scoreArticle(article, tuning) {
   const politicsHits = scorePolitics(normalizedAll);
   const { hard: hardNegHits, soft: softNegHits } = scoreNegativity(normalizedAll);
   const { isNonMuskVehicle } = scoreVehicles(normalizedAll);
-  const muskHits = countKeywordHits(normalizedAll, KEYWORDS.muskAllowlist);
-  const hasMuskContext = muskHits > 0;
+  // Only boost when Musk/Tesla/SpaceX is the subject of the article (title).
+  // Body mentions are too often incidental (e.g. Home Assistant release
+  // notes mentioning a Tesla integration once or twice).
+  const muskTitleHits = countKeywordHits(normalizedTitle, KEYWORDS.muskAllowlist);
+  const muskBodyHits = countKeywordHits(normalizedBody, KEYWORDS.muskAllowlist);
+  // Title-only context to avoid boosting articles that merely mention
+  // "Tesla integration" once in passing (e.g. Home Assistant release notes).
+  const hasMuskContext = muskTitleHits > 0;
+  const muskBoostUnits = muskTitleHits;
+  // Radio / shortwave / amateur boost so dedicated hobby content surfaces.
+  const radioStrongKeywords = [
+    "ham radio",
+    "amateur radio",
+    "shortwave radio",
+    "shortwave listening",
+    "shortwave broadcast",
+    "shortwave receiver",
+    "shortwave transmitter",
+    "shortwave antenna",
+    "software defined radio",
+    "qsl card",
+    "numbers station",
+    "pirate radio",
+    "wwv time signal",
+  ];
+  const radioWeakKeywords = ["shortwave", "swl", "hf radio", "qsl", "sdr", "qrp", "transceiver", "hamfest"];
+  const radioStrongHits =
+    countKeywordHits(normalizedTitle, radioStrongKeywords) * 2 +
+    countKeywordHits(normalizedBody, radioStrongKeywords);
+  const radioWeakHits =
+    countKeywordHits(normalizedTitle, radioWeakKeywords) +
+    (countKeywordHits(normalizedBody, radioWeakKeywords) > 0 ? 1 : 0);
+  const radioBoostUnits = radioStrongHits > 0 ? radioStrongHits + Math.min(radioWeakHits, 2) : 0;
   const hasCouponCodePromo = hasCouponCodeContext(combinedText);
 
   const sentimentResult = sentiment.analyze(combinedText);
@@ -1486,7 +1517,8 @@ function scoreArticle(article, tuning) {
     aiHits * tuning.aiWeight +
     positivityScore +
     Math.min(categoryScore, 30) * 0.05 +
-    Math.min(muskHits, 4) * 1.5;
+    Math.min(muskBoostUnits, 4) * 1.5 +
+    Math.min(radioBoostUnits, 6) * 2.0;
 
   return {
     ...article,
