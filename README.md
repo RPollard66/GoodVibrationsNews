@@ -28,7 +28,7 @@ and it stays fresh on its own.
 - **Per-feed exponential backoff** so flaky feeds don't slow everything down
 - **Mobile-friendly** responsive layout
 
-## Run locally (no Docker)
+## Run locally (for running with Docker see below)
 
 Requires [Node.js](https://nodejs.org/) 18 or newer.
 
