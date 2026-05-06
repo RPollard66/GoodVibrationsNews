@@ -43,147 +43,67 @@ so other devices on your home network can reach it at
 
 ## Run with Docker (recommended)
 
-This is the easiest way to run Good Vibrations News on a Raspberry Pi, NAS,
-home server, or any always-on machine. The container clones the latest code
-from this repo on every start, so you stay up to date with no manual git
-work, and a Watchtower sidecar keeps the base Node image current.
+The container clones the latest code from this repo on every start, so you
+stay up to date with no manual git work, and a Watchtower sidecar keeps the
+base Node image current.
 
 ### 1. Install Docker
 
-Pick the section for your operating system. You only need to do this once.
+Install Docker (with Compose v2) using the preferred method for your OS —
+e.g. Docker Desktop on macOS/Windows, or your distro's package manager /
+`get.docker.com` script on Linux. See <https://docs.docker.com/get-docker/>.
 
-#### Linux (Raspberry Pi, Debian, Ubuntu, Fedora, Arch, etc.)
-
-```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-```
-
-Log out and back in (or reboot) so the group change takes effect. Verify:
+Verify with:
 
 ```bash
 docker --version
 docker compose version
 ```
 
-#### macOS
+### 2. Get the Compose file
 
-1. Download **Docker Desktop for Mac** from <https://www.docker.com/products/docker-desktop/>
-   (choose Apple Silicon or Intel as appropriate).
-2. Open the `.dmg`, drag Docker to Applications, and launch it.
-3. Wait for the whale icon in the menu bar to stop animating.
-4. Verify in Terminal:
+Create a folder for the app, then download `compose.yaml` from this repo
+into it:
 
-   ```bash
-   docker --version
-   docker compose version
-   ```
+<https://raw.githubusercontent.com/RPollard66/GoodVibrationsNews/main/compose.yaml>
 
-#### Windows 10 / 11
+You can save it with your browser, `curl -O`, or PowerShell's
+`Invoke-WebRequest` — whatever's easiest. The only thing that matters is
+that the file ends up named `compose.yaml` in the folder you'll run Docker
+from.
 
-1. Make sure WSL 2 is enabled. From an admin PowerShell:
-
-   ```powershell
-   wsl --install
-   ```
-
-   Reboot if prompted.
-2. Download **Docker Desktop for Windows** from <https://www.docker.com/products/docker-desktop/>
-   and run the installer. Accept the WSL 2 backend option.
-3. Launch Docker Desktop and wait for it to start.
-4. Verify in PowerShell or Windows Terminal:
-
-   ```powershell
-   docker --version
-   docker compose version
-   ```
-
-> **Tip for Windows users:** run all the commands below from a WSL 2 shell
-> (Ubuntu, Debian, etc.) for the smoothest experience. PowerShell works too,
-> but file paths and `curl` flags differ.
-
-### 2. Get the Compose file and start the app
-
-```bash
-mkdir good-vibrations-news
-cd good-vibrations-news
-curl -O https://raw.githubusercontent.com/RPollard66/GoodVibrationsNews/main/compose.yaml
-docker compose up -d
-```
-
-On Windows PowerShell replace the `curl -O` line with:
-
-```powershell
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/RPollard66/GoodVibrationsNews/main/compose.yaml -OutFile compose.yaml
-```
-
-What happens on first start:
-
-1. Docker pulls the `node:current-bookworm-slim` base image.
-2. The container clones this repo into a Docker volume.
-3. `npm ci --omit=dev` installs dependencies.
-4. `node server.js` starts the app on port **4000**.
-5. The Watchtower sidecar begins checking every 5 minutes for an updated Node
-   image.
-
-The first start can take a few minutes (image download + npm install). Watch
-progress with `docker compose logs -f good-vibrations-news`.
-
-### 3. Open the app
-
-- Same machine: <http://localhost:4000>
-- Another device on your network: `http://<host-ip-address>:4000`
-
-To find your host's LAN IP:
-
-| OS                | Command                                |
-| ----------------- | -------------------------------------- |
-| Linux / macOS     | `ip addr` or `ifconfig`                |
-| Windows (PS)      | `ipconfig`                             |
-| Raspberry Pi OS   | `hostname -I`                          |
-
-### Common Docker operations
-
-```bash
-# Show logs
-docker compose logs -f good-vibrations-news
-
-# Stop
-docker compose down
-
-# Restart (this also pulls latest code from GitHub)
-docker compose restart good-vibrations-news
-
-# Force a full rebuild with latest code AND latest Node image
-docker compose pull && docker compose up -d --force-recreate
-
-# Update Compose file itself if it changes upstream
-curl -O https://raw.githubusercontent.com/RPollard66/GoodVibrationsNews/main/compose.yaml
-docker compose up -d
-```
-
-### Change the port
-
-Create a `.env` file next to `compose.yaml`:
+(Optional) create a `.env` file next to `compose.yaml` to override defaults:
 
 ```
 PORT=8080
 ```
 
-Then `docker compose up -d` to apply.
+### 3. Start, manage, and update
 
-### Data persistence
-
-The SQLite database, settings, and snapshots live in a Docker volume named
-`<project>_app_data` (the project prefix matches the folder containing your
-`compose.yaml`). The volume survives container restarts, image updates, and
-code refreshes. To reset everything to defaults:
+Run all of these from the folder containing `compose.yaml`:
 
 ```bash
-docker compose down
-docker volume rm <project>_app_data
+# Start (or apply config changes)
 docker compose up -d
+
+# View logs
+docker compose logs -f good-vibrations-news
+
+# Stop
+docker compose down
+
+# Restart (also pulls latest code from GitHub)
+docker compose restart good-vibrations-news
+
+# Full rebuild with latest code AND latest Node image
+docker compose pull && docker compose up -d --force-recreate
 ```
+
+Then open <http://localhost:4000> (or `http://<host-ip>:4000` from another
+device on your network).
+
+Data persists in a Docker volume (`<project>_app_data`) and survives
+restarts and updates.
 
 ## API
 
