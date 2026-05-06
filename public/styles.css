@@ -404,18 +404,24 @@ h1 {
 
 .tune-topics-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 0.5rem 1rem;
   margin-top: 0.6rem;
 }
 
 .tune-topic-row {
   display: grid;
-  grid-template-columns: 5.5rem 1fr auto;
+  grid-template-columns: minmax(0, 5.5rem) minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.4rem;
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.78rem;
+  min-width: 0;
+}
+
+.tune-topic-row select {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tune-topic-row .tune-cat {
@@ -490,5 +496,48 @@ h1 {
 
   .card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .max-items-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .max-items-form input[type="range"] {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .add-feed-form {
+    flex-direction: column;
+  }
+
+  .add-feed-form input,
+  .add-feed-form select,
+  .add-feed-form button {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .tune-topics-list {
+    grid-template-columns: 1fr;
+  }
+
+  .feed-item {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .feed-info {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .feed-url {
+    max-width: 100%;
+  }
+
+  .feed-category-select {
+    margin-right: 0;
   }
 }
