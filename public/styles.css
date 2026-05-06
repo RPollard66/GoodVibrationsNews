@@ -323,6 +323,23 @@ h1 {
   gap: 0.5rem;
 }
 
+.feed-search {
+  width: 100%;
+  margin: 0 0 0.7rem;
+  background: var(--bg-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.85rem;
+}
+
+.feed-search:focus {
+  outline: none;
+  border-color: rgba(88, 228, 167, 0.7);
+}
+
 .feed-item {
   display: flex;
   align-items: center;

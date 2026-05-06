@@ -1,6 +1,8 @@
 const state = {
   allArticles: [],
-  selectedFilter: "all"
+  selectedFilter: "all",
+  feeds: [],
+  feedSearch: ""
 };
 
 const articleContainer = document.getElementById("articles");
@@ -13,6 +15,7 @@ const manageFeedsBtn = document.getElementById("manageFeedsBtn");
 const refreshNowBtn = document.getElementById("refreshNowBtn");
 const feedsList = document.getElementById("feedsList");
 const feedsStatus = document.getElementById("feedsStatus");
+const feedSearchInput = document.getElementById("feedSearchInput");
 const addFeedForm = document.getElementById("addFeedForm");
 const feedLabelInput = document.getElementById("feedLabelInput");
 const feedUrlInput = document.getElementById("feedUrlInput");
@@ -302,42 +305,62 @@ async function loadFeeds() {
       minimumMax: typeof categoryMinimumMax === "number" ? categoryMinimumMax : 5
     });
 
-    feeds.forEach((feed) => {
-      const li = document.createElement("li");
-      li.className = "feed-item";
-
-      const info = document.createElement("div");
-      info.className = "feed-info";
-      const label = document.createElement("span");
-      label.className = "feed-label";
-      label.textContent = feed.label;
-      const url = document.createElement("a");
-      url.className = "feed-url";
-      url.href = feed.url;
-      url.textContent = feed.url;
-      url.target = "_blank";
-      url.rel = "noopener noreferrer";
-      info.append(label, url);
-
-      const categorySelect = document.createElement("select");
-      categorySelect.className = "feed-category-select";
-      categorySelect.setAttribute("aria-label", `Category for ${feed.label}`);
-      populateCategorySelect(categorySelect, feed.category || "general");
-      categorySelect.addEventListener("change", () => updateFeedCategory(feed, categorySelect.value));
-
-      const removeBtn = document.createElement("button");
-      removeBtn.type = "button";
-      removeBtn.className = "remove-btn";
-      removeBtn.textContent = "Remove";
-      removeBtn.addEventListener("click", () => removeFeed(feed));
-
-      li.append(info, categorySelect, removeBtn);
-      feedsList.append(li);
-    });
+    state.feeds = feeds;
+    renderFeedItems();
   } catch (error) {
     console.error(error);
     feedsStatus.textContent = "Could not load feeds.";
   }
+}
+
+function renderFeedItems() {
+  feedsList.innerHTML = "";
+  const q = state.feedSearch.trim().toLowerCase();
+  const filtered = q
+    ? state.feeds.filter((feed) => {
+        const hay = `${feed.label} ${feed.url} ${feed.category || ""}`.toLowerCase();
+        return hay.includes(q);
+      })
+    : state.feeds;
+
+  if (state.feeds.length > 0) {
+    feedsStatus.textContent = q
+      ? `${filtered.length} of ${state.feeds.length} feeds match`
+      : `${state.feeds.length} feeds configured`;
+  }
+
+  filtered.forEach((feed) => {
+    const li = document.createElement("li");
+    li.className = "feed-item";
+
+    const info = document.createElement("div");
+    info.className = "feed-info";
+    const label = document.createElement("span");
+    label.className = "feed-label";
+    label.textContent = feed.label;
+    const url = document.createElement("a");
+    url.className = "feed-url";
+    url.href = feed.url;
+    url.textContent = feed.url;
+    url.target = "_blank";
+    url.rel = "noopener noreferrer";
+    info.append(label, url);
+
+    const categorySelect = document.createElement("select");
+    categorySelect.className = "feed-category-select";
+    categorySelect.setAttribute("aria-label", `Category for ${feed.label}`);
+    populateCategorySelect(categorySelect, feed.category || "general");
+    categorySelect.addEventListener("change", () => updateFeedCategory(feed, categorySelect.value));
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "remove-btn";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => removeFeed(feed));
+
+    li.append(info, categorySelect, removeBtn);
+    feedsList.append(li);
+  });
 }
 
 async function removeFeed(feed) {
@@ -463,6 +486,13 @@ if (perFeedCapInput) {
 if (perFeedCapForm) {
   perFeedCapForm.addEventListener("submit", (event) => {
     event.preventDefault();
+  });
+}
+
+if (feedSearchInput) {
+  feedSearchInput.addEventListener("input", () => {
+    state.feedSearch = feedSearchInput.value || "";
+    renderFeedItems();
   });
 }
 
