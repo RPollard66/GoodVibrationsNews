@@ -21,6 +21,10 @@ const maxTotalForm = document.getElementById("maxTotalForm");
 const maxTotalInput = document.getElementById("maxTotalInput");
 const maxTotalHint = document.getElementById("maxTotalHint");
 const maxTotalValue = document.getElementById("maxTotalValue");
+const perFeedCapForm = document.getElementById("perFeedCapForm");
+const perFeedCapInput = document.getElementById("perFeedCapInput");
+const perFeedCapValue = document.getElementById("perFeedCapValue");
+const tuneTopicsList = document.getElementById("tuneTopicsList");
 
 function formatDate(value) {
   if (!value) return "Unknown";
@@ -151,13 +155,119 @@ function populateCategorySelect(select, selected) {
   });
 }
 
+const tuneState = {
+  weights: {},
+  minimums: {},
+  weightOptions: ["off", "less", "normal", "more"],
+  minimumMax: 5
+};
+let tuneTopicsTimer = null;
+
+function debounceSaveTuneTopics() {
+  clearTimeout(tuneTopicsTimer);
+  tuneTopicsTimer = setTimeout(() => {
+    saveCategoryWeights().catch(() => {});
+    saveCategoryMinimums().catch(() => {});
+  }, 400);
+}
+
+async function saveCategoryWeights() {
+  feedsStatus.textContent = "Saving topic weights...";
+  const response = await fetch("/api/settings/category-weights", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ weights: tuneState.weights })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    feedsStatus.textContent = `Failed: ${data.error || response.status}`;
+    return;
+  }
+  feedsStatus.textContent = "Topic weights saved. Refreshing...";
+  loadArticles().catch(() => {});
+}
+
+async function saveCategoryMinimums() {
+  const response = await fetch("/api/settings/category-minimums", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ minimums: tuneState.minimums })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    feedsStatus.textContent = `Failed: ${data.error || response.status}`;
+  }
+}
+
+function renderTuneTopics({ weights, weightOptions, minimums, minimumMax }) {
+  if (!tuneTopicsList) return;
+  tuneState.weights = { ...weights };
+  tuneState.minimums = { ...minimums };
+  tuneState.weightOptions = weightOptions;
+  tuneState.minimumMax = minimumMax;
+
+  tuneTopicsList.innerHTML = "";
+  availableCategories.forEach((cat) => {
+    const row = document.createElement("div");
+    row.className = "tune-topic-row";
+
+    const name = document.createElement("span");
+    name.className = "tune-cat";
+    name.textContent = cat;
+
+    const weightSel = document.createElement("select");
+    weightSel.setAttribute("aria-label", `Weight for ${cat}`);
+    weightOptions.forEach((opt) => {
+      const o = document.createElement("option");
+      o.value = opt;
+      o.textContent = opt;
+      if ((weights[cat] || "normal") === opt) o.selected = true;
+      weightSel.append(o);
+    });
+    weightSel.addEventListener("change", () => {
+      tuneState.weights[cat] = weightSel.value;
+      debounceSaveTuneTopics();
+    });
+
+    const minInput = document.createElement("input");
+    minInput.type = "number";
+    minInput.min = "0";
+    minInput.max = String(minimumMax);
+    minInput.step = "1";
+    minInput.value = String(minimums[cat] != null ? minimums[cat] : 0);
+    minInput.setAttribute("aria-label", `Min slots for ${cat}`);
+    minInput.addEventListener("change", () => {
+      let v = Math.round(Number(minInput.value));
+      if (!Number.isFinite(v)) v = 0;
+      v = Math.max(0, Math.min(minimumMax, v));
+      minInput.value = String(v);
+      tuneState.minimums[cat] = v;
+      debounceSaveTuneTopics();
+    });
+
+    row.append(name, weightSel, minInput);
+    tuneTopicsList.append(row);
+  });
+}
+
 async function loadFeeds() {
   feedsStatus.textContent = "Loading feeds...";
   feedsList.innerHTML = "";
   try {
     const response = await fetch("/api/feeds");
     if (!response.ok) throw new Error(`Status ${response.status}`);
-    const { feeds = [], categories, maxTotalArticles, maxTotalArticlesRange } = await response.json();
+    const {
+      feeds = [],
+      categories,
+      maxTotalArticles,
+      maxTotalArticlesRange,
+      perFeedCap,
+      perFeedCapRange,
+      categoryWeights,
+      categoryWeightOptions,
+      categoryMinimums,
+      categoryMinimumMax
+    } = await response.json();
     if (Array.isArray(categories) && categories.length > 0) {
       availableCategories = categories;
     }
@@ -173,6 +283,24 @@ async function loadFeeds() {
       maxTotalInput.value = String(maxTotalArticles);
       maxTotalValue.textContent = String(maxTotalArticles);
     }
+
+    if (perFeedCapRange) {
+      perFeedCapInput.min = String(perFeedCapRange.min);
+      perFeedCapInput.max = String(perFeedCapRange.max);
+    }
+    if (typeof perFeedCap === "number") {
+      perFeedCapInput.value = String(perFeedCap);
+      perFeedCapValue.textContent = String(perFeedCap);
+    }
+
+    renderTuneTopics({
+      weights: categoryWeights || {},
+      weightOptions: Array.isArray(categoryWeightOptions) && categoryWeightOptions.length
+        ? categoryWeightOptions
+        : ["off", "less", "normal", "more"],
+      minimums: categoryMinimums || {},
+      minimumMax: typeof categoryMinimumMax === "number" ? categoryMinimumMax : 5
+    });
 
     feeds.forEach((feed) => {
       const li = document.createElement("li");
@@ -306,6 +434,37 @@ maxTotalInput.addEventListener("change", async () => {
 maxTotalForm.addEventListener("submit", (event) => {
   event.preventDefault();
 });
+
+if (perFeedCapInput) {
+  perFeedCapInput.addEventListener("input", () => {
+    perFeedCapValue.textContent = perFeedCapInput.value;
+  });
+
+  perFeedCapInput.addEventListener("change", async () => {
+    const value = Number(perFeedCapInput.value);
+    if (!Number.isFinite(value)) return;
+    feedsStatus.textContent = "Saving...";
+    try {
+      const response = await fetch("/api/settings/per-feed-cap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Status ${response.status}`);
+      feedsStatus.textContent = `Per-feed cap set to ${data.perFeedCap}. Refreshing...`;
+      loadArticles().catch(() => {});
+    } catch (error) {
+      feedsStatus.textContent = `Failed to save: ${error.message}`;
+    }
+  });
+}
+
+if (perFeedCapForm) {
+  perFeedCapForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+  });
+}
 
 refreshNowBtn.addEventListener("click", async () => {
   refreshNowBtn.disabled = true;

@@ -123,6 +123,17 @@ const MAX_TOTAL_ARTICLES_DEFAULT = 75;
 const MAX_TOTAL_ARTICLES_MIN = 25;
 const MAX_TOTAL_ARTICLES_MAX = 120;
 
+const PER_FEED_CAP_KEY = "perFeedCap";
+const PER_FEED_CAP_DEFAULT = 8;
+const PER_FEED_CAP_MIN = 3;
+const PER_FEED_CAP_MAX = 15;
+
+const CATEGORY_WEIGHTS_KEY = "categoryWeights";
+const CATEGORY_MINIMUMS_KEY = "categoryMinimums";
+const CATEGORY_WEIGHT_VALUES = { off: 0, less: 0.5, normal: 1.0, more: 2.0 };
+const CATEGORY_WEIGHT_DEFAULT = "normal";
+const CATEGORY_MINIMUM_MAX = 5;
+
 function clampMaxItemsPerFeed(value) {
   const n = Math.round(Number(value));
   if (!Number.isFinite(n)) return MAX_ITEMS_PER_FEED_DEFAULT;
@@ -173,6 +184,98 @@ function setMaxTotalArticles(value) {
     )
     .run(MAX_TOTAL_ARTICLES_KEY, String(clamped), now);
   return clamped;
+}
+
+function clampPerFeedCap(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return PER_FEED_CAP_DEFAULT;
+  return Math.max(PER_FEED_CAP_MIN, Math.min(PER_FEED_CAP_MAX, n));
+}
+
+function getPerFeedCap() {
+  const conn = ensureDb();
+  const row = conn.prepare("SELECT value FROM settings WHERE key = ?").get(PER_FEED_CAP_KEY);
+  if (!row) return PER_FEED_CAP_DEFAULT;
+  return clampPerFeedCap(row.value);
+}
+
+function setPerFeedCap(value) {
+  const conn = ensureDb();
+  const clamped = clampPerFeedCap(value);
+  const now = new Date().toISOString();
+  conn
+    .prepare(
+      "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) " +
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
+    )
+    .run(PER_FEED_CAP_KEY, String(clamped), now);
+  return clamped;
+}
+
+function normalizeCategoryWeights(input) {
+  const out = {};
+  const allowed = new Set(Object.keys(CATEGORY_WEIGHT_VALUES));
+  FEED_CATEGORIES.forEach((cat) => {
+    const raw = input && typeof input === "object" ? String(input[cat] || "").toLowerCase() : "";
+    out[cat] = allowed.has(raw) ? raw : CATEGORY_WEIGHT_DEFAULT;
+  });
+  return out;
+}
+
+function getCategoryWeights() {
+  const conn = ensureDb();
+  const row = conn.prepare("SELECT value FROM settings WHERE key = ?").get(CATEGORY_WEIGHTS_KEY);
+  let parsed = null;
+  if (row) {
+    try { parsed = JSON.parse(row.value); } catch (_) { parsed = null; }
+  }
+  return normalizeCategoryWeights(parsed);
+}
+
+function setCategoryWeights(input) {
+  const conn = ensureDb();
+  const normalized = normalizeCategoryWeights(input);
+  const now = new Date().toISOString();
+  conn
+    .prepare(
+      "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) " +
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
+    )
+    .run(CATEGORY_WEIGHTS_KEY, JSON.stringify(normalized), now);
+  return normalized;
+}
+
+function normalizeCategoryMinimums(input) {
+  const out = {};
+  FEED_CATEGORIES.forEach((cat) => {
+    const raw = input && typeof input === "object" ? Number(input[cat]) : 0;
+    const n = Number.isFinite(raw) ? Math.round(raw) : 0;
+    out[cat] = Math.max(0, Math.min(CATEGORY_MINIMUM_MAX, n));
+  });
+  return out;
+}
+
+function getCategoryMinimums() {
+  const conn = ensureDb();
+  const row = conn.prepare("SELECT value FROM settings WHERE key = ?").get(CATEGORY_MINIMUMS_KEY);
+  let parsed = null;
+  if (row) {
+    try { parsed = JSON.parse(row.value); } catch (_) { parsed = null; }
+  }
+  return normalizeCategoryMinimums(parsed);
+}
+
+function setCategoryMinimums(input) {
+  const conn = ensureDb();
+  const normalized = normalizeCategoryMinimums(input);
+  const now = new Date().toISOString();
+  conn
+    .prepare(
+      "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) " +
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
+    )
+    .run(CATEGORY_MINIMUMS_KEY, JSON.stringify(normalized), now);
+  return normalized;
 }
 
 function addFeed({ label, url, category }) {
@@ -271,6 +374,18 @@ module.exports = {
   setMaxItemsPerFeed,
   getMaxTotalArticles,
   setMaxTotalArticles,
+  getPerFeedCap,
+  setPerFeedCap,
+  getCategoryWeights,
+  setCategoryWeights,
+  getCategoryMinimums,
+  setCategoryMinimums,
+  CATEGORY_WEIGHT_VALUES,
+  CATEGORY_WEIGHT_DEFAULT,
+  CATEGORY_MINIMUM_MAX,
+  PER_FEED_CAP_MIN,
+  PER_FEED_CAP_MAX,
+  PER_FEED_CAP_DEFAULT,
   MAX_ITEMS_PER_FEED_MIN,
   MAX_ITEMS_PER_FEED_MAX,
   MAX_ITEMS_PER_FEED_DEFAULT,

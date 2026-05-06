@@ -67,6 +67,18 @@
           <span id="maxTotalHint" class="max-items-hint"></span>
         </form>
 
+        <form id="perFeedCapForm" class="max-items-form">
+          <label for="perFeedCapInput">Per-feed cap: <span id="perFeedCapValue">8</span></label>
+          <input type="range" id="perFeedCapInput" min="3" max="15" step="1" value="8" />
+          <span id="perFeedCapHint" class="max-items-hint">Max items pulled per feed before ranking. Lower = more diversity, higher = more depth from each source.</span>
+        </form>
+
+        <details class="tune-topics" id="tuneTopicsPanel">
+          <summary>Tune topics</summary>
+          <p class="status-line">For each category: <strong>Weight</strong> nudges its rank up or down (Off removes it). <strong>Min</strong> guarantees at least that many slots when articles are available.</p>
+          <div id="tuneTopicsList" class="tune-topics-list"></div>
+        </details>
+
         <form id="addFeedForm" class="add-feed-form">
           <input type="text" id="feedLabelInput" placeholder="Label (e.g. Ars Technica)" required />
           <input type="url" id="feedUrlInput" placeholder="https://example.com/feed" required />

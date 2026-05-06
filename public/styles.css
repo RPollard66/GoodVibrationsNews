@@ -386,6 +386,59 @@ h1 {
   outline: 1px solid var(--accent-2);
 }
 
+.tune-topics {
+  margin: 0.8rem 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tune-topics > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.85rem;
+  padding: 0.3rem 0;
+}
+
+.tune-topics-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.5rem 1rem;
+  margin-top: 0.6rem;
+}
+
+.tune-topic-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+}
+
+.tune-topic-row .tune-cat {
+  color: var(--text);
+  text-transform: capitalize;
+}
+
+.tune-topic-row select,
+.tune-topic-row input[type="number"] {
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.75rem;
+}
+
+.tune-topic-row input[type="number"] {
+  width: 3rem;
+  text-align: right;
+}
+
 @keyframes intro {
   from {
     opacity: 0;

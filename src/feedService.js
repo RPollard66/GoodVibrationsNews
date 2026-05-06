@@ -6,6 +6,10 @@ const {
   getSettings,
   getFeeds,
   getMaxTotalArticles,
+  getPerFeedCap,
+  getCategoryWeights,
+  getCategoryMinimums,
+  CATEGORY_WEIGHT_VALUES,
   saveSnapshot,
   getLatestSnapshot
 } = require("./storage");
@@ -167,6 +171,58 @@ function dedupeArticles(articles) {
   });
 }
 
+// Applies user-configured category controls to a ranked article list:
+//   1. Drop categories with weight = "off".
+//   2. Multiply each article's rankScore by its category weight (less=0.5,
+//      normal=1.0, more=2.0) so "More" categories outrank similarly-aged
+//      "Less" ones.
+//   3. Reserve the top-K items per category that has a configured minimum,
+//      then fill remaining slots with the highest-ranked leftovers, until
+//      total slots are filled.
+function applyCategoryControls(ranked, weights, minimums, total) {
+  const adjusted = ranked
+    .filter((a) => {
+      const w = weights[a.category] || "normal";
+      return w !== "off";
+    })
+    .map((a) => {
+      const w = weights[a.category] || "normal";
+      const factor = CATEGORY_WEIGHT_VALUES[w] != null ? CATEGORY_WEIGHT_VALUES[w] : 1.0;
+      return { ...a, rankScore: (a.rankScore || 0) * factor };
+    })
+    .sort((x, y) => (y.rankScore || 0) - (x.rankScore || 0));
+
+  if (adjusted.length <= total) return adjusted;
+
+  const result = [];
+  const used = new Set();
+  const keyOf = (a) => `${a.source}::${a.link}`;
+
+  // Reserve minimums per category (top-ranked first).
+  Object.entries(minimums).forEach(([cat, min]) => {
+    if (!min) return;
+    const items = adjusted.filter((a) => a.category === cat).slice(0, min);
+    items.forEach((item) => {
+      if (result.length >= total) return;
+      const k = keyOf(item);
+      if (used.has(k)) return;
+      result.push(item);
+      used.add(k);
+    });
+  });
+
+  // Fill remaining slots from the highest-ranked unused articles.
+  for (const a of adjusted) {
+    if (result.length >= total) break;
+    const k = keyOf(a);
+    if (used.has(k)) continue;
+    result.push(a);
+    used.add(k);
+  }
+
+  return result;
+}
+
 async function refreshArticles(force) {
   ensureDb();
 
@@ -184,20 +240,20 @@ async function refreshArticles(force) {
   const settings = getSettings();
   const feeds = getFeeds();
   const maxTotalArticles = getMaxTotalArticles();
-  // Per-feed cap on what goes into the rank pool. High-cadence feeds
-  // (Phys.org, Hacker News) would otherwise drown out quieter ones
-  // (NASA, OpenAI, Audubon, AmateurRadio.com) under pure recency ranking.
-  const PER_FEED_CAP = 8;
+  const perFeedCap = getPerFeedCap();
+  const categoryWeights = getCategoryWeights();
+  const categoryMinimums = getCategoryMinimums();
 
-  const settled = await Promise.all(feeds.map((feed) => fetchFeed(feed, PER_FEED_CAP)));
+  const settled = await Promise.all(feeds.map((feed) => fetchFeed(feed, perFeedCap)));
   const allArticles = settled.flatMap((entry) => entry.items);
   const feedStats = settled.map((entry) => entry.result);
 
-  // analyzeAndFilterArticles already sorts by rankScore desc — take the top
-  // N by rank, then re-sort that subset by publication date for display.
-  const analyzed = analyzeAndFilterArticles(dedupeArticles(allArticles), settings)
-    .slice(0, maxTotalArticles)
-    .sort((a, b) => {
+  // Rank, then apply user category controls (weights + soft minimums),
+  // then take top-N, then re-sort by date for display.
+  const ranked = analyzeAndFilterArticles(dedupeArticles(allArticles), settings);
+  const tuned = applyCategoryControls(ranked, categoryWeights, categoryMinimums, maxTotalArticles);
+
+  const analyzed = tuned.sort((a, b) => {
       const ta = a.pubDate ? new Date(a.pubDate).getTime() : 0;
       const tb = b.pubDate ? new Date(b.pubDate).getTime() : 0;
       return tb - ta;
