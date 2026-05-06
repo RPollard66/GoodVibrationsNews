@@ -56,6 +56,11 @@ body {
   margin: 0.7rem auto 2.4rem;
   display: grid;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.app-shell > * {
+  min-width: 0;
 }
 
 .hero {
@@ -505,7 +510,8 @@ h1 {
 
   .max-items-form input[type="range"] {
     width: 100%;
-    flex: 1 1 auto;
+    min-width: 0;
+    flex: 0 0 auto;
   }
 
   .add-feed-form {
@@ -516,7 +522,8 @@ h1 {
   .add-feed-form select,
   .add-feed-form button {
     width: 100%;
-    flex: 1 1 auto;
+    min-width: 0;
+    flex: 0 0 auto;
   }
 
   .tune-topics-list {
