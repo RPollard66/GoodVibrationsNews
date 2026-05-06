@@ -184,8 +184,12 @@ async function refreshArticles(force) {
   const settings = getSettings();
   const feeds = getFeeds();
   const maxTotalArticles = getMaxTotalArticles();
+  // Per-feed cap on what goes into the rank pool. High-cadence feeds
+  // (Phys.org, Hacker News) would otherwise drown out quieter ones
+  // (NASA, OpenAI, Audubon, AmateurRadio.com) under pure recency ranking.
+  const PER_FEED_CAP = 8;
 
-  const settled = await Promise.all(feeds.map((feed) => fetchFeed(feed, maxTotalArticles)));
+  const settled = await Promise.all(feeds.map((feed) => fetchFeed(feed, PER_FEED_CAP)));
   const allArticles = settled.flatMap((entry) => entry.items);
   const feedStats = settled.map((entry) => entry.result);
 

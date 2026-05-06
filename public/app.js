@@ -27,6 +27,37 @@ function formatDate(value) {
   return new Date(value).toLocaleString();
 }
 
+function updateFilterChips() {
+  const counts = state.allArticles.reduce((acc, a) => {
+    const c = a.category || "general";
+    acc[c] = (acc[c] || 0) + 1;
+    return acc;
+  }, {});
+
+  document.querySelectorAll(".filter-chip").forEach((chip) => {
+    const filter = chip.dataset.filter;
+    const labelBase = chip.dataset.label || (chip.dataset.label = chip.textContent.replace(/\s*\(\d+\)\s*$/, ""));
+    if (filter === "all") {
+      chip.hidden = false;
+      chip.textContent = `${labelBase} (${state.allArticles.length})`;
+      return;
+    }
+    const count = counts[filter] || 0;
+    if (count === 0) {
+      chip.hidden = true;
+      if (state.selectedFilter === filter) {
+        state.selectedFilter = "all";
+        document.querySelectorAll(".filter-chip").forEach((n) => n.classList.remove("active"));
+        const allChip = document.querySelector('.filter-chip[data-filter="all"]');
+        if (allChip) allChip.classList.add("active");
+      }
+    } else {
+      chip.hidden = false;
+      chip.textContent = `${labelBase} (${count})`;
+    }
+  });
+}
+
 function renderArticles() {
   articleContainer.innerHTML = "";
 
@@ -34,6 +65,7 @@ function renderArticles() {
     ? state.allArticles
     : state.allArticles.filter((article) => article.category === state.selectedFilter);
 
+  updateFilterChips();
   statusLine.textContent = `Showing ${visible.length} articles`;
 
   visible.forEach((article) => {
