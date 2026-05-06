@@ -2,7 +2,16 @@ const fs = require("fs");
 const path = require("path");
 const Database = require("better-sqlite3");
 const { DEFAULT_TUNING, normalizeTuning } = require("./analyzer");
-const { DEFAULT_FEEDS } = require("./defaultFeeds");
+const {
+  DEFAULT_FEEDS,
+  FEED_CATEGORIES,
+  DEFAULT_FEED_CATEGORY
+} = require("./defaultFeeds");
+
+function normalizeCategory(value) {
+  const v = String(value || "").trim().toLowerCase();
+  return FEED_CATEGORIES.includes(v) ? v : DEFAULT_FEED_CATEGORY;
+}
 
 const dataDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dataDir, "good-vibrations.db");
@@ -33,9 +42,18 @@ function ensureDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       label TEXT NOT NULL,
       url TEXT NOT NULL UNIQUE,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT '${DEFAULT_FEED_CATEGORY}'
     );
   `);
+
+  // Migration: add category column to pre-existing feeds tables.
+  const feedColumns = db.prepare("PRAGMA table_info(feeds)").all();
+  if (!feedColumns.some((c) => c.name === "category")) {
+    db.exec(
+      `ALTER TABLE feeds ADD COLUMN category TEXT NOT NULL DEFAULT '${DEFAULT_FEED_CATEGORY}'`
+    );
+  }
 
   const upsert = db.prepare(
     "INSERT OR IGNORE INTO settings (key, value, updated_at) VALUES (?, ?, ?)"
@@ -50,12 +68,26 @@ function ensureDb() {
   const feedCount = db.prepare("SELECT COUNT(*) AS n FROM feeds").get().n;
   if (feedCount === 0) {
     const insertFeed = db.prepare(
-      "INSERT OR IGNORE INTO feeds (label, url, created_at) VALUES (?, ?, ?)"
+      "INSERT OR IGNORE INTO feeds (label, url, created_at, category) VALUES (?, ?, ?, ?)"
     );
     const seedTx = db.transaction((feeds) => {
-      feeds.forEach((feed) => insertFeed.run(feed.label, feed.url, now));
+      feeds.forEach((feed) =>
+        insertFeed.run(feed.label, feed.url, now, normalizeCategory(feed.category))
+      );
     });
     seedTx(DEFAULT_FEEDS);
+  } else {
+    // For existing DBs, backfill known feeds' categories from defaults so
+    // returning users get the new categorisation without losing custom feeds.
+    const updateCategory = db.prepare(
+      "UPDATE feeds SET category = ? WHERE url = ? AND (category IS NULL OR category = '' OR category = ?)"
+    );
+    const backfill = db.transaction((feeds) => {
+      feeds.forEach((feed) =>
+        updateCategory.run(normalizeCategory(feed.category), feed.url, DEFAULT_FEED_CATEGORY)
+      );
+    });
+    backfill(DEFAULT_FEEDS);
   }
 
   return db;
@@ -75,7 +107,9 @@ function getSettings() {
 function getFeeds() {
   const conn = ensureDb();
   return conn
-    .prepare("SELECT id, label, url, created_at AS createdAt FROM feeds ORDER BY label COLLATE NOCASE")
+    .prepare(
+      "SELECT id, label, url, category, created_at AS createdAt FROM feeds ORDER BY label COLLATE NOCASE"
+    )
     .all();
 }
 
@@ -141,10 +175,11 @@ function setMaxTotalArticles(value) {
   return clamped;
 }
 
-function addFeed({ label, url }) {
+function addFeed({ label, url, category }) {
   const conn = ensureDb();
   const cleanLabel = String(label || "").trim();
   const cleanUrl = String(url || "").trim();
+  const cleanCategory = normalizeCategory(category);
 
   if (!cleanLabel) {
     const err = new Error("Label is required");
@@ -160,9 +195,15 @@ function addFeed({ label, url }) {
   const now = new Date().toISOString();
   try {
     const info = conn
-      .prepare("INSERT INTO feeds (label, url, created_at) VALUES (?, ?, ?)")
-      .run(cleanLabel, cleanUrl, now);
-    return { id: info.lastInsertRowid, label: cleanLabel, url: cleanUrl, createdAt: now };
+      .prepare("INSERT INTO feeds (label, url, created_at, category) VALUES (?, ?, ?, ?)")
+      .run(cleanLabel, cleanUrl, now, cleanCategory);
+    return {
+      id: info.lastInsertRowid,
+      label: cleanLabel,
+      url: cleanUrl,
+      category: cleanCategory,
+      createdAt: now
+    };
   } catch (error) {
     if (String(error.message).includes("UNIQUE")) {
       const err = new Error("A feed with that URL already exists");
@@ -208,12 +249,24 @@ function getLatestSnapshot() {
   }
 }
 
+function setFeedCategory(id, category) {
+  const conn = ensureDb();
+  const cleanCategory = normalizeCategory(category);
+  const info = conn
+    .prepare("UPDATE feeds SET category = ? WHERE id = ?")
+    .run(cleanCategory, id);
+  return info.changes > 0 ? cleanCategory : null;
+}
+
 module.exports = {
   ensureDb,
   getSettings,
   getFeeds,
   addFeed,
   removeFeed,
+  setFeedCategory,
+  FEED_CATEGORIES,
+  DEFAULT_FEED_CATEGORY,
   getMaxItemsPerFeed,
   setMaxItemsPerFeed,
   getMaxTotalArticles,

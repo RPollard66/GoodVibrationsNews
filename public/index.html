@@ -37,11 +37,16 @@
       <section id="newsView" class="app-view">
         <section class="filters" aria-label="Category filters">
           <button class="filter-chip active" data-filter="all">All</button>
-          <button class="filter-chip" data-filter="ai">AI</button>
-          <button class="filter-chip" data-filter="android">Android</button>
-          <button class="filter-chip" data-filter="maker">Maker/Electronics</button>
           <button class="filter-chip" data-filter="science">Science</button>
+          <button class="filter-chip" data-filter="ai">AI</button>
+          <button class="filter-chip" data-filter="maker">Maker</button>
           <button class="filter-chip" data-filter="gaming">Gaming</button>
+          <button class="filter-chip" data-filter="android">Android</button>
+          <button class="filter-chip" data-filter="tech">Tech</button>
+          <button class="filter-chip" data-filter="radio">Radio</button>
+          <button class="filter-chip" data-filter="green">Green</button>
+          <button class="filter-chip" data-filter="birding">Birding</button>
+          <button class="filter-chip" data-filter="weather">Weather</button>
           <button class="filter-chip" data-filter="general">General</button>
         </section>
 
@@ -65,6 +70,7 @@
         <form id="addFeedForm" class="add-feed-form">
           <input type="text" id="feedLabelInput" placeholder="Label (e.g. Ars Technica)" required />
           <input type="url" id="feedUrlInput" placeholder="https://example.com/feed" required />
+          <select id="feedCategoryInput" aria-label="Category"></select>
           <button type="submit" class="ghost-btn">Add feed</button>
         </form>
         <div id="feedsStatus" class="status-line"></div>

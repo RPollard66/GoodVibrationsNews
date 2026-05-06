@@ -1,7 +1,18 @@
 const express = require("express");
 const path = require("path");
 const { getCachedArticles, refreshArticles, invalidateCache } = require("./src/feedService");
-const { ensureDb, getFeeds, addFeed, removeFeed, getMaxTotalArticles, setMaxTotalArticles, MAX_TOTAL_ARTICLES_MIN, MAX_TOTAL_ARTICLES_MAX } = require("./src/storage");
+const {
+  ensureDb,
+  getFeeds,
+  addFeed,
+  removeFeed,
+  setFeedCategory,
+  FEED_CATEGORIES,
+  getMaxTotalArticles,
+  setMaxTotalArticles,
+  MAX_TOTAL_ARTICLES_MIN,
+  MAX_TOTAL_ARTICLES_MAX
+} = require("./src/storage");
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -28,6 +39,7 @@ app.get("/api/feeds", (_req, res) => {
   try {
     res.json({
       feeds: getFeeds(),
+      categories: FEED_CATEGORIES,
       maxTotalArticles: getMaxTotalArticles(),
       maxTotalArticlesRange: { min: MAX_TOTAL_ARTICLES_MIN, max: MAX_TOTAL_ARTICLES_MAX }
     });
@@ -38,9 +50,9 @@ app.get("/api/feeds", (_req, res) => {
 });
 
 app.post("/api/feeds", (req, res) => {
-  const { label, url } = req.body || {};
+  const { label, url, category } = req.body || {};
   try {
-    const feed = addFeed({ label, url });
+    const feed = addFeed({ label, url, category });
     invalidateCache();
     refreshArticles(true).catch((error) => {
       console.error("Refresh after add-feed failed", error);
@@ -52,6 +64,31 @@ app.post("/api/feeds", (req, res) => {
     }
     console.error("Failed to add feed", error);
     res.status(500).json({ error: "Failed to add feed." });
+  }
+});
+
+app.patch("/api/feeds/:id", (req, res) => {
+  const id = Number.parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.status(400).json({ error: "Invalid feed id" });
+  }
+  const { category } = req.body || {};
+  if (!category || !FEED_CATEGORIES.includes(String(category).toLowerCase())) {
+    return res.status(400).json({
+      error: `category must be one of: ${FEED_CATEGORIES.join(", ")}`
+    });
+  }
+  try {
+    const saved = setFeedCategory(id, category);
+    if (!saved) return res.status(404).json({ error: "Feed not found" });
+    invalidateCache();
+    refreshArticles(true).catch((error) => {
+      console.error("Refresh after category-change failed", error);
+    });
+    res.json({ ok: true, category: saved });
+  } catch (error) {
+    console.error("Failed to update feed category", error);
+    res.status(500).json({ error: "Failed to update feed category." });
   }
 });
 

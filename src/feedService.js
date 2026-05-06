@@ -123,6 +123,7 @@ async function fetchFeed(feedConfig, maxItemsPerFeed) {
       return {
         source: feedConfig.label,
         sourceUrl: feedConfig.url,
+        category: feedConfig.category || "general",
         title: item.title || "Untitled",
         link: item.link || "",
         pubDate: item.pubDate || item.isoDate || null,

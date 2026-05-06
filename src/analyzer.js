@@ -1,6 +1,21 @@
-const Sentiment = require("sentiment");
-
-const sentiment = new Sentiment();
+// Article filtering & ranking.
+//
+// New (May 2026) design: keep things simple.
+//
+//  1. Articles inherit their category from their source feed (set in
+//     defaultFeeds.js / the feeds DB column). We do NOT keyword-classify.
+//  2. We filter out a small list of clearly-unwanted content:
+//       - politics
+//       - hard-negative news (war / death / disaster / serious crime)
+//       - non-Musk vehicle / auto-industry coverage
+//       - coupon-code promo posts
+//  3. Surviving articles are ranked by recency. No sentiment analysis,
+//     no per-category weights, no AI multiplier. The user explicitly asked
+//     for a flat playing field across categories.
+//
+// `tuning` is kept for back-compat with the existing settings UI/storage
+// but is no longer consulted by the filter — the only tunable behaviour is
+// the cap on total articles, which lives in storage.js.
 
 const DEFAULT_TUNING = {
   aiWeight: 2.5,
@@ -8,1267 +23,6 @@ const DEFAULT_TUNING = {
   negativePenaltyWeight: 3,
   positivityThreshold: 0.45
 };
-
-// ---------------------------------------------------------------------------
-// Keyword configuration
-//
-// Edit these lists to tune what counts as relevant / positive / negative /
-// political. The structure is intentionally explicit so each axis can be
-// tuned without affecting the others.
-//
-// `strong` keywords are high-confidence multi-word phrases. They count more
-// toward category relevance and they're enough on their own to assign an
-// article to a category.
-//
-// `weak` keywords are short / common terms that are useful as supporting
-// evidence but should never categorize an article on their own.
-// ---------------------------------------------------------------------------
-const KEYWORDS = {
-  categories: {
-    ai: {
-      strong: [
-        "artificial intelligence",
-        "machine learning",
-        "deep learning",
-        "neural network",
-        "generative ai",
-        "large language model",
-        "small language model",
-        "foundation model",
-        "frontier model",
-        "transformer model",
-        "diffusion model",
-        "stable diffusion",
-        "image generation",
-        "text generation",
-        "video generation",
-        "voice cloning",
-        "text-to-image",
-        "text-to-video",
-        "computer vision",
-        "natural language processing",
-        "retrieval augmented generation",
-        "vector database",
-        "prompt engineering",
-        "synthetic data",
-        "ai agent",
-        "autonomous agent",
-        "agentic ai",
-        "ai chip",
-        "ai accelerator",
-        "ai safety",
-        "ai alignment",
-        "responsible ai",
-        "ai ethics",
-        "github copilot",
-        "microsoft copilot",
-        "google deepmind",
-        "hugging face",
-        "openai",
-        "anthropic",
-        "deepmind",
-        "mistral ai"
-      ],
-      weak: [
-        "ai",
-        "llm",
-        "slm",
-        "nlp",
-        "rag",
-        "genai",
-        "multimodal",
-        "embedding",
-        "fine-tuning",
-        "inference",
-        "chatgpt",
-        "gpt-4",
-        "gpt-5",
-        "claude",
-        "gemini",
-        "perplexity",
-        "llama",
-        "mistral",
-        "deepseek",
-        "grok",
-        "dall-e",
-        "midjourney",
-        "sora",
-        "runway",
-        "copilot"
-      ]
-    },
-
-    android: {
-      strong: [
-        "android open source project",
-        "android security update",
-        "android security patch",
-        "google play store",
-        "google play services",
-        "google mobile services",
-        "google pixel",
-        "pixel phone",
-        "pixel fold",
-        "pixel watch",
-        "pixel tablet",
-        "pixel feature drop",
-        "google tensor",
-        "tensor chip",
-        "samsung galaxy",
-        "galaxy fold",
-        "galaxy flip",
-        "one ui",
-        "motorola razr",
-        "moto g",
-        "nothing phone",
-        "asus rog phone",
-        "sony xperia",
-        "android studio",
-        "jetpack compose",
-        "kotlin android",
-        "android sdk",
-        "android ndk",
-        "android tablet",
-        "android tv",
-        "google tv",
-        "wear os",
-        "android auto",
-        "android automotive",
-        "android xr",
-        "circle to search",
-        "find my device",
-        "custom rom",
-        "lineageos",
-        "grapheneos",
-        "calyxos",
-        "unlock bootloader",
-        "factory image",
-        "firmware update",
-        "feature drop",
-        "material you",
-        "foldable phone",
-        "flip phone",
-        "smartphone",
-        "mobile phone"
-      ],
-      weak: [
-        "android",
-        "aosp",
-        "apk",
-        "sideload",
-        "fdroid",
-        "f-droid",
-        "pixel",
-        "galaxy s",
-        "galaxy z",
-        "oneplus",
-        "oxygenos",
-        "xiaomi",
-        "hyperos",
-        "redmi",
-        "poco",
-        "oppo",
-        "realme",
-        "vivo",
-        "honor",
-        "snapdragon",
-        "mediatek",
-        "dimensity",
-        "exynos",
-        "esim",
-        "rcs",
-        "magisk",
-        "ota update"
-      ]
-    },
-
-    science: {
-      strong: [
-        "peer reviewed",
-        "peer-reviewed",
-        "clinical trial",
-        "clinical success",
-        "drug discovery",
-        "stem cell",
-        "gene editing",
-        "synthetic biology",
-        "carbon capture",
-        "renewable energy",
-        "particle physics",
-        "quantum computing",
-        "quantum mechanics",
-        "computer science",
-        "materials science",
-        "earth science",
-        "environmental science",
-        "james webb",
-        "jwst",
-        "hubble",
-        "exoplanet",
-        "black hole",
-        "asteroid",
-        "comet",
-        "spacecraft",
-        "satellite",
-        "biotechnology",
-        "neuroscience",
-        "microbiology",
-        "virology",
-        "immunology",
-        "cancer research",
-        "nanotechnology",
-        "battery technology",
-        "superconductor",
-        "fusion reactor",
-        "nuclear fusion",
-        "deep sea",
-        "marine biology",
-        "conservation success",
-        "species recovery",
-        "wildlife conservation",
-        "biodiversity",
-        // Citizen-science / hobbyist science
-        "birdnet",
-        "birdnet-go",
-        "birdnet go",
-        "cornell lab of ornithology",
-        "cornell lab",
-        "all about birds",
-        "macaulay library",
-        "ebird",
-        "e-bird",
-        "xeno-canto",
-        "xeno canto",
-        "ornithology",
-        "bird identification",
-        "bird songs",
-        "bird calls",
-        "bird migration",
-        "bird watching",
-        "birdwatching",
-        "bird species",
-        "songbird",
-        "raptor migration",
-        "audubon",
-        "field recording",
-        "nature recording",
-        "soundscape ecology",
-        "bioacoustics",
-        "lavalier microphone",
-        "shotgun microphone",
-        "parabolic microphone",
-        "acoustic monitoring",
-        "weatherflow tempest",
-        "tempest weather station",
-        "personal weather station",
-        "weather station",
-        "citizen science",
-        "amateur astronomy",
-        "backyard astronomy",
-        "phenology"
-      ],
-      weak: [
-        "science",
-        "scientific",
-        "scientist",
-        "scientists",
-        "research",
-        "researchers",
-        "study",
-        "studies",
-        "experiment",
-        "discovery",
-        "breakthrough",
-        "physics",
-        "quantum",
-        "astrophysics",
-        "astronomy",
-        "cosmology",
-        "space",
-        "planet",
-        "mars",
-        "moon",
-        "nasa",
-        "esa",
-        "spacex",
-        "rocket",
-        "climate",
-        "geology",
-        "volcano",
-        "ocean",
-        "oceanography",
-        "atmosphere",
-        "biology",
-        "biotech",
-        "genetics",
-        "genomics",
-        "dna",
-        "rna",
-        "crispr",
-        "vaccine",
-        "chemistry",
-        "robotics",
-        "engineering",
-        "mathematics",
-        "math",
-        "polymer",
-        "catalyst"
-      ]
-    },
-
-    maker: {
-      strong: [
-        // Maker / hobby
-        "raspberry pi",
-        "raspberry pi pico",
-        "arduino",
-        "esp32",
-        "esp8266",
-        "single board computer",
-        "hobby electronics",
-        "hardware hacking",
-        "open source hardware",
-        "diy electronics",
-        "soldering iron",
-        "logic analyzer",
-        "oscilloscope",
-        "stepper motor",
-        // Radio / wireless
-        "ham radio",
-        "amateur radio",
-        "shortwave radio",
-        "shortwave listening",
-        "shortwave broadcast",
-        "shortwave receiver",
-        "shortwave transmitter",
-        "shortwave antenna",
-        "qsl card",
-        "numbers station",
-        "pirate radio",
-        "wwv time signal",
-        "software defined radio",
-        "lorawan",
-        "meshtastic",
-        "meshcore",
-        "flipper zero",
-        "rtl-sdr",
-        // 3D printing - general
-        "3d printing",
-        "3d printer",
-        "3d printers",
-        "additive manufacturing",
-        "fdm printer",
-        "fff printer",
-        "resin printer",
-        "sla printer",
-        "msla printer",
-        "3d model",
-        "stl file",
-        "3mf file",
-        "g-code",
-        "auto bed leveling",
-        "first layer",
-        "layer height",
-        "print speed",
-        "print bed",
-        "build plate",
-        "pei sheet",
-        "heated bed",
-        "filament dryer",
-        "carbon fiber filament",
-        "silk pla",
-        "multi-material",
-        "direct drive",
-        // Brands
-        "bambu lab",
-        "bambu studio",
-        "prusa slicer",
-        "prusaslicer",
-        "orca slicer",
-        "creality ender",
-        "voron printer",
-        "elegoo printer",
-        "anycubic printer",
-        "formlabs printer",
-        "ultimaker printer",
-        // Tools / equipment
-        "laser cutter",
-        "vinyl cutter",
-        "cnc router",
-        // CAD / design / EDA software
-        "fusion 360",
-        "autodesk fusion",
-        "freecad",
-        "openscad",
-        "tinkercad",
-        "onshape",
-        "solidworks",
-        "shapr3d",
-        "plasticity 3d",
-        "blender 3d",
-        "sketchup",
-        "inkscape",
-        "kicad",
-        "easyeda",
-        "eagle pcb",
-        "fritzing",
-        "computer aided design",
-        "parametric modeling",
-        "cad model",
-        "cad software",
-        "3d cad",
-        "3d modeling",
-        "3d design",
-        "home assistant",
-        "home automation",
-        "smart home",
-        "klipper firmware",
-        "marlin firmware",
-        "octoprint",
-        "mainsail",
-        "fluidd",
-        // Project / tutorial framing common in maker writing
-        "diy project",
-        "weekend project",
-        "build guide",
-        "step by step build",
-        "hardware project",
-        "electronics project",
-        "retro computing",
-        "retro gaming build",
-        "build a",
-        "how i built",
-        // Pi-ecosystem unambiguous identifiers
-        "pi camera",
-        "pi 5",
-        "pi 4",
-        "pi zero",
-        "pico w",
-        // Homelab / self-hosted / containers
-        "homelab",
-        "home lab",
-        "home server",
-        "self-hosted",
-        "self hosted",
-        "self-hosting",
-        "self hosting",
-        "docker compose",
-        "docker container",
-        "docker image",
-        "docker swarm",
-        "dockerfile",
-        "podman",
-        "proxmox",
-        "truenas",
-        "unraid",
-        "nas build",
-        "jellyfin",
-        "plex media server",
-        "nextcloud",
-        "pi-hole",
-        "pihole",
-        "adguard home",
-        "traefik",
-        "caddy server",
-        "nginx proxy manager",
-        "watchtower",
-        "portainer",
-        "vaultwarden",
-        "bitwarden",
-        "immich",
-        "paperless-ngx",
-        "home assistant",
-        "reverse proxy",
-        "wireguard",
-        "tailscale",
-        "zerotier",
-        "nomad cluster",
-        "k3s",
-        "k8s cluster",
-        // Desktop Linux distros (hobbyist / homelab adjacent)
-        "linux mint",
-        "cinnamon desktop",
-        "pop!_os",
-        "pop os",
-        "endeavouros",
-        "manjaro",
-        // Personal electric mobility
-        "electric bike",
-        "electric bicycle",
-        "e-bike",
-        "ebike",
-        "electric scooter",
-        "e-scooter",
-        "electric unicycle",
-        "electric skateboard",
-        "e-skateboard",
-        "onewheel",
-        "boosted board",
-        "micromobility",
-        "personal electric vehicle",
-        "cargo bike"
-      ],
-      weak: [
-        "maker",
-        "makerspace",
-        "diy",
-        "breadboard",
-        "perfboard",
-        "stripboard",
-        "microcontroller",
-        "embedded",
-        "soldering",
-        "solder",
-        "reflow",
-        "pcb",
-        "neopixel",
-        "servo",
-        "lora",
-        "sdr",
-        "shortwave",
-        "swl",
-        "hf radio",
-        "qsl",
-        "iot",
-        "mqtt",
-        "zigbee",
-        "z-wave",
-        "ble",
-        "jtag",
-        "uart",
-        "spi",
-        "i2c",
-        "gpio",
-        "fpga",
-        "cnc",
-        "filament",
-        "pla",
-        "petg",
-        "abs",
-        "asa",
-        "tpu",
-        "ams",
-        "hotend",
-        "nozzle",
-        "extruder",
-        "bowden",
-        "slicer",
-        "cura",
-        "prusa",
-        "creality",
-        "ender",
-        "voron",
-        "elegoo",
-        "anycubic",
-        "formlabs",
-        "ultimaker",
-        "bambu",
-        // CAD / EDA — short forms
-        "cad",
-        "fusion360",
-        "blender",
-        "klipper",
-        // Pi ecosystem short forms
-        "rpi",
-        "pico",
-        "picamera",
-        "phat",
-        "bonnet",
-        "home-assistant",
-        "hass",
-        "hassio",
-        "node-red",
-        "nodered",
-        "esphome",
-        // Homelab / container short forms
-        "selfhosted",
-        "selfhost",
-        "compose",
-        "podman",
-        "proxmox",
-        "truenas",
-        "unraid",
-        "jellyfin",
-        "plex",
-        "nextcloud",
-        "pihole",
-        "traefik",
-        "portainer",
-        "immich",
-        "k3s",
-        // Print-problem terms — kept here to help categorize. Analyzer
-        // treats these as neutral so troubleshooting articles still surface.
-        "stringing",
-        "warping",
-        "bed adhesion",
-        "z-offset",
-        "supports",
-        "infill"
-      ]
-    },
-
-    gaming: {
-      strong: [
-        "video game",
-        "video games",
-        "game developer",
-        "game development",
-        "game studio",
-        "game engine",
-        "game release",
-        "game launch",
-        "early access",
-        "patch notes",
-        "expansion pack",
-        "indie game",
-        "cozy game",
-        "horror game",
-        "survival game",
-        "strategy game",
-        "simulation game",
-        "battle royale",
-        "metroidvania",
-        "roguelike",
-        "roguelite",
-        "soulslike",
-        "online co-op",
-        "cross-play",
-        "crossplay",
-        "cloud gaming",
-        "handheld gaming",
-        "pc gaming",
-        "xbox series x",
-        "xbox series s",
-        "xbox game pass",
-        "playstation plus",
-        "nintendo switch",
-        "switch 2",
-        "steam deck",
-        "epic games store",
-        "asus rog ally",
-        "lenovo legion go",
-        "geforce now",
-        "xbox cloud gaming",
-        "remote play",
-        "unreal engine",
-        "unity engine",
-        "ray tracing",
-        "speedrun",
-        "speedrunning",
-        "twitch streamer",
-        "animal crossing",
-        "elder scrolls",
-        "world of warcraft",
-        "league of legends",
-        "counter-strike",
-        "apex legends",
-        "call of duty",
-        "grand theft auto",
-        "baldur's gate",
-        "elden ring",
-        "the last of us",
-        "god of war",
-        "spider-man",
-        "final fantasy",
-        "dragon quest",
-        "gears of war"
-      ],
-      weak: [
-        "gaming",
-        "gamer",
-        "game pass",
-        "playstation",
-        "ps5",
-        "ps4",
-        "nintendo",
-        "xbox",
-        "esports",
-        "e-sports",
-        "tournament",
-        "multiplayer",
-        "co-op",
-        "modding",
-        "dlc",
-        "remaster",
-        "remake",
-        "fps",
-        "rpg",
-        "jrpg",
-        "mmo",
-        "mmorpg",
-        "godot",
-        "dlss",
-        "fsr",
-        "zelda",
-        "mario",
-        "pokemon",
-        "pokémon",
-        "metroid",
-        "halo",
-        "forza",
-        "skyrim",
-        "fallout",
-        "starfield",
-        "doom",
-        "diablo",
-        "warcraft",
-        "minecraft",
-        "fortnite",
-        "roblox",
-        "valorant",
-        "dota",
-        "gta"
-      ]
-    },
-
-    general: {
-      strong: [
-        // General software / dev
-        "open source",
-        "self-hosted",
-        "self hosting",
-        "homelab",
-        "home server",
-        "version control",
-        "package manager",
-        // Cybersecurity (positive interest topic)
-        "zero-day",
-        "zero day",
-        "supply chain attack",
-        "responsible disclosure",
-        "bug bounty",
-        "patch tuesday",
-        "security update",
-        "security advisory",
-        "ctf challenge",
-        "reverse engineering",
-        "penetration testing",
-        // Infra / cloud
-        "data center",
-        "edge computing",
-        "kubernetes cluster"
-      ],
-      weak: [
-        "software",
-        "hardware",
-        "tech",
-        "technology",
-        "developer",
-        "developers",
-        "coding",
-        "programming",
-        "programmer",
-        "startup",
-        "linux",
-        "ubuntu",
-        "debian",
-        "fedora",
-        "arch linux",
-        "macos",
-        "windows 11",
-        "docker",
-        "kubernetes",
-        "container",
-        "github",
-        "gitlab",
-        "git",
-        "api",
-        "rest api",
-        "graphql",
-        "sdk",
-        // Cybersecurity weak terms — nudge category, never drop articles.
-        "cybersecurity",
-        "infosec",
-        "hacker",
-        "hacking",
-        "malware",
-        "ransomware",
-        "phishing",
-        "exploit",
-        "vulnerability",
-        "cve",
-        "breach",
-        "data breach",
-        "patch",
-        "encryption",
-        "firewall"
-      ]
-    }
-  },
-
-  // Strong, unambiguous positive terms. The sentiment library already handles
-  // general positive tone, so this list stays tight to avoid false positives.
-  positiveBoost: [
-    "uplifting",
-    "inspiring",
-    "heartwarming",
-    "feel-good",
-    "good news",
-    "positive news",
-    "breakthrough",
-    "innovation",
-    "innovative",
-    "milestone",
-    "achievement",
-    "success story",
-    "rescued",
-    "rescue mission",
-    "restored",
-    "rebuilt",
-    "life-saving",
-    "saves lives",
-    "promising results",
-    "effective treatment",
-    "clean energy",
-    "conservation success",
-    "species recovery",
-    "expands access",
-    "empowers",
-    "empowering",
-    "accessible",
-    "affordable",
-    "donated",
-    "donation",
-    "volunteer",
-    "kindness",
-    "generosity"
-  ],
-
-  // Hard negatives — articles that match these are dropped.
-  hardNegative: [
-    // War / terrorism / violence
-    "war",
-    "civil war",
-    "invasion",
-    "airstrike",
-    "missile strike",
-    "bombing",
-    "bomb attack",
-    "terrorist",
-    "terrorism",
-    "hostage",
-    "kidnapping",
-    "abduction",
-    // Death / serious crime
-    "killed",
-    "dead",
-    "death",
-    "deaths",
-    "fatal",
-    "murder",
-    "manslaughter",
-    "shooting",
-    "stabbing",
-    "rape",
-    "sexual assault",
-    "mass shooting",
-    "gun violence",
-    // Disasters
-    "disaster",
-    "catastrophe",
-    "famine",
-    "drought",
-    "wildfire",
-    "hurricane",
-    "tornado",
-    "earthquake destroyed",
-    "deadly flood",
-    "pandemic",
-    "outbreak",
-    // Major financial / scandal
-    "bankruptcy",
-    "embezzlement",
-    "bribery",
-    "corruption scandal",
-    "ponzi scheme",
-    "money laundering"
-  ],
-
-  // Soft negatives — lower the positivity score but don't auto-drop. Cyber
-  // terms ("attack", "breach") live here so security reporting still surfaces.
-  softNegative: [
-    "attack",
-    "attacks",
-    "attacked",
-    "lawsuit",
-    "sued",
-    "scandal",
-    "fraud",
-    "allegations",
-    "arrested",
-    "charged",
-    "convicted",
-    "shutdown",
-    "shut down",
-    "outage",
-    "layoff",
-    "layoffs",
-    "job cuts",
-    "shortage",
-    "delayed",
-    "controversy",
-    "controversial",
-    "criticized",
-    "backlash",
-    "warning",
-    "concerns"
-  ],
-
-  // Vehicle / automotive terms. Articles matching any of these are dropped
-  // unless the article also mentions a Tesla allow-list term. This keeps
-  // Tesla coverage (and SpaceX-adjacent Elon stories that mention Tesla)
-  // while filtering out general car / auto-industry news.
-  vehicleTerms: [
-    "car",
-    "cars",
-    "sedan",
-    "suv",
-    "truck",
-    "pickup truck",
-    "minivan",
-    "automobile",
-    "automotive",
-    "auto industry",
-    "auto maker",
-    "automaker",
-    "automakers",
-    "vehicle",
-    "vehicles",
-    "ev",
-    "evs",
-    "electric vehicle",
-    "electric vehicles",
-    "electric car",
-    "electric cars",
-    "electric suv",
-    "electric truck",
-    "electric pickup",
-    "hybrid car",
-    "plug-in hybrid",
-    "phev",
-    "self-driving",
-    "self driving",
-    "autonomous vehicle",
-    "autonomous driving",
-    "robotaxi",
-    "robo-taxi",
-    "ford",
-    "gm",
-    "general motors",
-    "chevrolet",
-    "chevy",
-    "cadillac",
-    "buick",
-    "chrysler",
-    "dodge",
-    "jeep",
-    "ram trucks",
-    "stellantis",
-    "toyota",
-    "lexus",
-    "honda",
-    "acura",
-    "nissan",
-    "infiniti",
-    "mazda",
-    "subaru",
-    "mitsubishi",
-    "hyundai",
-    "kia",
-    "genesis motors",
-    "volkswagen",
-    "vw id",
-    "audi",
-    "porsche",
-    "bmw",
-    "mercedes-benz",
-    "mercedes benz",
-    "mini cooper",
-    "volvo cars",
-    "polestar",
-    "jaguar",
-    "land rover",
-    "range rover",
-    "ferrari",
-    "lamborghini",
-    "maserati",
-    "bugatti",
-    "bentley",
-    "rolls-royce",
-    "mclaren",
-    "aston martin",
-    "lotus cars",
-    "rivian",
-    "lucid motors",
-    "fisker",
-    "byd",
-    "nio",
-    "xpeng",
-    "li auto",
-    "zeekr",
-    "geely",
-    "great wall motors",
-    "vinfast",
-    "waymo",
-    "cruise automation",
-    "zoox"
-  ],
-
-  // Musk allow-list — if any of these appear, the vehicle filter is bypassed.
-  // Covers Elon Musk himself plus Tesla / SpaceX / xAI / Neuralink / Boring
-  // Co. / Starlink so interviews and cross-company stories aren't caught by
-  // the broader automotive filter.
-  muskAllowlist: [
-    "elon musk",
-    "musk interview",
-    // Tesla
-    "tesla",
-    "model s",
-    "model 3",
-    "model x",
-    "model y",
-    "cybertruck",
-    "cybercab",
-    "cyber truck",
-    "tesla semi",
-    "tesla roadster",
-    "powerwall",
-    "megapack",
-    "supercharger",
-    "tesla bot",
-    "optimus robot",
-    "full self-driving",
-    "full self driving",
-    "tesla fsd",
-    // SpaceX
-    "spacex",
-    "space x",
-    "starship",
-    "super heavy",
-    "falcon 9",
-    "falcon heavy",
-    "dragon capsule",
-    "crew dragon",
-    "cargo dragon",
-    "raptor engine",
-    "starbase",
-    // Starlink
-    "starlink",
-    "starshield",
-    // xAI / Grok
-    "xai",
-    "x.ai",
-    "grok ai",
-    "grok chatbot",
-    "grok model",
-    "colossus supercomputer",
-    // Neuralink / Boring Co. / other Musk ventures
-    "neuralink",
-    "boring company",
-    "the boring company",
-    "hyperloop"
-  ],
-
-  // Hard politics — present anywhere → drop. "policy" / "regulation" are
-  // intentionally NOT here: too noisy in tech writing ("privacy policy",
-  // "AI regulation", "cookie policy"). Real political articles will hit
-  // multiple terms below.
-  hardPolitics: [
-    // Elections / campaigns
-    "election",
-    "elections",
-    "electoral",
-    "ballot",
-    "primary election",
-    "caucus",
-    "voter turnout",
-    "campaign rally",
-    "campaign trail",
-    "presidential candidate",
-    "candidate for",
-    "incumbent",
-    "ruling party",
-    "opposition party",
-    "coalition government",
-    // Legislatures / lawmakers
-    "senate",
-    "senator",
-    "congress",
-    "congressional",
-    "house of representatives",
-    "parliament",
-    "parliamentary",
-    "lawmaker",
-    "lawmakers",
-    "legislature",
-    // Heads of state / political offices
-    "president",
-    "vice president",
-    "prime minister",
-    "chancellor",
-    "governor",
-    "mayor",
-    "cabinet member",
-    "secretary of state",
-    "attorney general",
-    "ambassador",
-    // Parties / ideology
-    "democrat",
-    "democrats",
-    "republican",
-    "republicans",
-    "gop",
-    "maga",
-    "left wing",
-    "left-wing",
-    "right wing",
-    "right-wing",
-    "far left",
-    "far-left",
-    "far right",
-    "far-right",
-    "populist",
-    "nationalist",
-    // Institutions / locations
-    "white house",
-    "capitol hill",
-    "supreme court",
-    "scotus",
-    "justice department",
-    "department of justice",
-    "kremlin",
-    "european commission",
-    "european parliament",
-    "united nations",
-    "u.n. security council",
-    "nato summit",
-    "world bank",
-    // Foreign policy levers
-    "diplomacy",
-    "diplomat",
-    "diplomatic",
-    "sanctions",
-    "sanctioned",
-    "tariff",
-    "tariffs",
-    "trade war",
-    "executive order",
-    // Named figures (current era)
-    "trump",
-    "biden",
-    "putin",
-    "xi jinping",
-    "netanyahu",
-    "zelensky",
-    "macron",
-    "starmer",
-    "modi",
-    "erdogan",
-    "orban",
-    "milei"
-  ],
-
-  // Source-name hints — used only to nudge category, never to filter.
-  sourceHints: {
-    android: ["android", "9to5google", "droid life", "phandroid", "talk android"],
-    general: ["hacker news", "ars technica", "the register", "bleeping computer", "krebs", "cloudflare", "kubernetes"],
-    maker: [
-      "hackaday",
-      "hackster",
-      "tom's hardware",
-      "all3dp",
-      "raspberry pi",
-      "jeff geerling",
-      "pi hut",
-      "pimoroni",
-      "pi my life up",
-      "raspberrytips",
-      "raspberrypi",
-      "recantha",
-      "pi3g",
-      "peppe8o",
-      "switchdoc",
-      "ozzmaker",
-      "picockpit",
-      "raspberry pipod",
-      "raspberry pi spy",
-      "factoryforward",
-      "opensource.com",
-      "alex ellis",
-      "embedded lab",
-      "circuit specialists",
-      "cat lamin",
-      "rantings",
-      "selfh.st",
-      "noted",
-      "linuxserver",
-      "docker blog",
-      "earthly",
-      "landchad",
-      "jellyfin",
-      "linux mint",
-      "home assistant",
-      "pi-hole",
-      "pihole",
-      "nextcloud",
-      "prusa",
-      "electrek",
-      "electric bike report"
-    ],
-    gaming: ["polygon", "kotaku", "ign", "rock paper", "eurogamer", "pc gamer"],
-    science: [
-      "nature",
-      "scientific american",
-      "new scientist",
-      "phys.org",
-      "sciencealert",
-      "all about birds",
-      "cornell lab",
-      "audubon",
-      "weatherflow"
-    ],
-  }
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function normalizeForKeywordMatch(value) {
-  return ` ${String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()} `;
-}
-
-function countKeywordHits(normalizedText, keywords) {
-  let count = 0;
-  for (const word of keywords) {
-    const normalizedWord = normalizeForKeywordMatch(word).trim();
-    if (!normalizedWord) continue;
-    if (normalizedText.includes(` ${normalizedWord} `)) count += 1;
-  }
-  return count;
-}
-
-function cleanText(value) {
-  return String(value || "")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
-    .replace(/<pre[\s\S]*?<\/pre>/gi, " ")
-    .replace(/<code[\s\S]*?<\/code>/gi, " ")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 function asNumber(value, fallback) {
   const parsed = Number(value);
@@ -1290,271 +44,198 @@ function normalizeTuning(tuning = {}) {
   };
 }
 
-function hasCouponCodeContext(value) {
-  const text = String(value || "").toLowerCase();
-  if (!text) return false;
+// ---------------------------------------------------------------------------
+// Exclusion keyword lists
+// ---------------------------------------------------------------------------
 
-  const couponPatterns = [
-    /\b(coupon|promo|discount|voucher|offer|deal)\s+code\b/,
-    /\bcode\s+at\s+checkout\b/,
-    /\buse\s+code\b/,
-    /\benter\s+code\b/,
-    /\bapply\s+code\b/,
-    /\bredeem\s+code\b/,
-    /\bpromo\b.*\bcheckout\b/,
-    /\b(save|off)\s+\d{1,3}%\b/,
-    /\bfree\s+shipping\b/
-  ];
+const POLITICS_KEYWORDS = [
+  "election", "elections", "electoral", "ballot", "primary election", "caucus",
+  "voter turnout", "campaign rally", "campaign trail", "presidential candidate",
+  "candidate for", "incumbent", "ruling party", "opposition party",
+  "coalition government", "senate", "senator", "congress", "congressional",
+  "house of representatives", "parliament", "parliamentary", "lawmaker",
+  "lawmakers", "legislature", "president", "vice president", "prime minister",
+  "chancellor", "governor", "mayor", "cabinet member", "secretary of state",
+  "attorney general", "ambassador", "democrat", "democrats", "republican",
+  "republicans", "gop", "maga", "left wing", "left-wing", "right wing",
+  "right-wing", "far left", "far-left", "far right", "far-right", "populist",
+  "nationalist", "white house", "capitol hill", "supreme court", "scotus",
+  "justice department", "department of justice", "kremlin", "european commission",
+  "european parliament", "united nations", "u.n. security council", "nato summit",
+  "world bank", "diplomacy", "diplomat", "diplomatic", "sanctions", "sanctioned",
+  "tariff", "tariffs", "trade war", "executive order",
+  "trump", "biden", "putin", "xi jinping", "netanyahu", "zelensky", "macron",
+  "starmer", "modi", "erdogan", "orban", "milei"
+];
 
-  return couponPatterns.some((pattern) => pattern.test(text));
+const HARD_NEGATIVE_KEYWORDS = [
+  // War / violence
+  "war", "civil war", "invasion", "airstrike", "missile strike", "bombing",
+  "bomb attack", "terrorist", "terrorism", "hostage", "kidnapping", "abduction",
+  // Death / serious crime
+  "killed", "dead", "death", "deaths", "fatal", "murder", "manslaughter",
+  "shooting", "stabbing", "rape", "sexual assault", "mass shooting", "gun violence",
+  // Disasters
+  "disaster", "catastrophe", "famine", "drought", "wildfire", "hurricane",
+  "tornado", "earthquake destroyed", "deadly flood", "pandemic", "outbreak",
+  // Financial / scandal
+  "bankruptcy", "embezzlement", "bribery", "corruption scandal", "ponzi scheme",
+  "money laundering"
+];
+
+const VEHICLE_KEYWORDS = [
+  "car", "cars", "sedan", "suv", "truck", "pickup truck", "minivan",
+  "automobile", "automotive", "auto industry", "auto maker", "automaker",
+  "automakers", "vehicle", "vehicles", "ev", "evs", "electric vehicle",
+  "electric vehicles", "electric car", "electric cars", "electric suv",
+  "electric truck", "electric pickup", "hybrid car", "plug-in hybrid", "phev",
+  "self-driving", "self driving", "autonomous vehicle", "autonomous driving",
+  "robotaxi", "robo-taxi",
+  "ford", "gm", "general motors", "chevrolet", "chevy", "cadillac", "buick",
+  "chrysler", "dodge", "jeep", "ram trucks", "stellantis", "toyota", "lexus",
+  "honda", "acura", "nissan", "infiniti", "mazda", "subaru", "mitsubishi",
+  "hyundai", "kia", "genesis motors", "volkswagen", "vw id", "audi", "porsche",
+  "bmw", "mercedes-benz", "mercedes benz", "mini cooper", "volvo cars",
+  "polestar", "jaguar", "land rover", "range rover", "ferrari", "lamborghini",
+  "maserati", "bugatti", "bentley", "rolls-royce", "mclaren", "aston martin",
+  "lotus cars", "rivian", "lucid motors", "fisker", "byd", "nio", "xpeng",
+  "li auto", "zeekr", "geely", "great wall motors", "vinfast", "waymo",
+  "cruise automation", "zoox"
+];
+
+// Musk-related allow-list — if any of these appear, the vehicle filter is
+// bypassed so Tesla / SpaceX / xAI / Neuralink / Boring Co. / Starlink
+// stories aren't caught alongside generic auto-industry news.
+const MUSK_ALLOWLIST = [
+  "elon musk", "musk interview",
+  // Tesla
+  "tesla", "model s", "model 3", "model x", "model y", "cybertruck", "cybercab",
+  "cyber truck", "tesla semi", "tesla roadster", "powerwall", "megapack",
+  "supercharger", "tesla bot", "optimus robot", "full self-driving",
+  "full self driving", "tesla fsd",
+  // SpaceX
+  "spacex", "space x", "starship", "super heavy", "falcon 9", "falcon heavy",
+  "dragon capsule", "crew dragon", "cargo dragon", "raptor engine", "starbase",
+  // Starlink
+  "starlink", "starshield",
+  // xAI / Grok
+  "xai", "x.ai", "grok ai", "grok chatbot", "grok model", "colossus supercomputer",
+  // Neuralink / Boring Co.
+  "neuralink", "boring company", "the boring company", "hyperloop"
+];
+
+const COUPON_PATTERNS = [
+  /\b(coupon|promo|discount|voucher|offer|deal)\s+code\b/,
+  /\bcode\s+at\s+checkout\b/,
+  /\buse\s+code\b/,
+  /\benter\s+code\b/,
+  /\bapply\s+code\b/,
+  /\bredeem\s+code\b/,
+  /\bpromo\b.*\bcheckout\b/,
+  /\b(save|off)\s+\d{1,3}%\b/,
+  /\bfree\s+shipping\b/
+];
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function cleanText(value) {
+  return String(value || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeForKeywordMatch(value) {
+  // Surround text with spaces and reduce all non-alphanumerics to single
+  // spaces so word-boundary checks ("\b" semantics) become a simple
+  // includes(" word ") test against any keyword.
+  return ` ${String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()} `;
+}
+
+function countKeywordHits(normalizedText, keywords) {
+  let n = 0;
+  for (const kw of keywords) {
+    const needle = ` ${String(kw).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+    if (needle === "  ") continue;
+    let idx = normalizedText.indexOf(needle);
+    while (idx !== -1) {
+      n += 1;
+      idx = normalizedText.indexOf(needle, idx + needle.length);
+    }
+  }
+  return n;
+}
+
+function hasAnyKeyword(normalizedText, keywords) {
+  for (const kw of keywords) {
+    const needle = ` ${String(kw).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+    if (needle === "  ") continue;
+    if (normalizedText.indexOf(needle) !== -1) return true;
+  }
+  return false;
+}
+
+function hasCouponContext(combinedText) {
+  const lower = String(combinedText || "").toLowerCase();
+  return COUPON_PATTERNS.some((re) => re.test(lower));
 }
 
 // ---------------------------------------------------------------------------
-// Per-axis scoring
+// Per-article scoring
 // ---------------------------------------------------------------------------
 
-const CATEGORY_NAMES = ["maker", "gaming", "android", "ai", "science", "general"];
-
-// Title hits weighted heaviest because titles are the strongest signal.
-// Strong keywords weighted ×2 over weak.
-function scoreCategories(normalizedTitle, normalizedBody, source) {
-  const sourceLower = String(source || "").toLowerCase();
-  const result = {};
-
-  for (const name of CATEGORY_NAMES) {
-    const def = KEYWORDS.categories[name];
-    const titleStrong = countKeywordHits(normalizedTitle, def.strong);
-    const titleWeak = countKeywordHits(normalizedTitle, def.weak);
-    const bodyStrong = countKeywordHits(normalizedBody, def.strong);
-    const bodyWeak = countKeywordHits(normalizedBody, def.weak);
-
-    let score = titleStrong * 6 + titleWeak * 3 + bodyStrong * 2 + bodyWeak * 1;
-
-    const hints = KEYWORDS.sourceHints[name] || [];
-    if (hints.some((hint) => sourceLower.includes(hint))) {
-      score += 2;
-    }
-
-    result[name] = {
-      score,
-      strongHits: titleStrong + bodyStrong,
-      weakHits: titleWeak + bodyWeak
-    };
-  }
-
-  return result;
-}
-
-function pickCategory(categoryScores) {
-  // Preference order: specific categories beat the generic "general" bucket.
-  const preferenceOrder = ["maker", "gaming", "android", "ai", "science", "general"];
-
-  // First pick: best of the specific (non-tech) categories only. If any has a
-  // real signal (strong hit OR a meaningful score), it wins outright over the
-  // generic tech bucket. This keeps 3D-printing / CAD / homelab articles in
-  // maker even when they also mention generic terms like "software" or
-  // "hardware" that would otherwise pile up in tech.
-  let bestSpecific = null;
-  let bestSpecificScore = 0;
-  for (const name of preferenceOrder) {
-    if (name === "general") continue;
-    const entry = categoryScores[name];
-    if (entry.score > bestSpecificScore) {
-      bestSpecific = name;
-      bestSpecificScore = entry.score;
-    }
-  }
-
-  if (bestSpecific) {
-    const entry = categoryScores[bestSpecific];
-    // A strong keyword hit, or a moderately strong score, claims the article.
-    if (entry.strongHits >= 1 || bestSpecificScore >= 6) {
-      return { category: bestSpecific, score: bestSpecificScore };
-    }
-  }
-
-  // No specific category had a strong claim. Fall back to whoever scored
-  // highest overall (typically general).
-  let best = "general";
-  let bestScore = categoryScores.general.score;
-  for (const name of preferenceOrder) {
-    const s = categoryScores[name].score;
-    if (s > bestScore) {
-      best = name;
-      bestScore = s;
-    }
-  }
-
-  // Need a meaningful match to claim a specific category at all.
-  if (best !== "general" && bestScore < 3) {
-    best = "general";
-    bestScore = categoryScores.general.score;
-  }
-
-  return { category: best, score: bestScore };
-}
-
-function scorePolitics(normalizedText) {
-  return countKeywordHits(normalizedText, KEYWORDS.hardPolitics);
-}
-
-function scoreNegativity(normalizedText) {
-  return {
-    hard: countKeywordHits(normalizedText, KEYWORDS.hardNegative),
-    soft: countKeywordHits(normalizedText, KEYWORDS.softNegative)
-  };
-}
-
-function scoreVehicles(normalizedText) {
-  const vehicleHits = countKeywordHits(normalizedText, KEYWORDS.vehicleTerms);
-  if (vehicleHits === 0) {
-    return { vehicleHits: 0, hasMuskContext: false, isNonMuskVehicle: false };
-  }
-  const muskHits = countKeywordHits(normalizedText, KEYWORDS.muskAllowlist);
-  return {
-    vehicleHits,
-    hasMuskContext: muskHits > 0,
-    isNonMuskVehicle: muskHits === 0
-  };
-}
-
-function scorePositivity(normalizedText, sentimentComparative, tuning, softHits, categoryStrongHits) {
-  const positiveHits = countKeywordHits(normalizedText, KEYWORDS.positiveBoost);
-
-  return (
-    sentimentComparative * tuning.positivityWeight +
-    positiveHits * 0.3 * tuning.positivityWeight -
-    softHits * 0.25 * tuning.negativePenaltyWeight +
-    Math.min(categoryStrongHits, 4) * 0.15
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main scoring entrypoint
-// ---------------------------------------------------------------------------
-
-function scoreArticle(article, tuning) {
+function scoreArticle(article) {
   const titleText = cleanText(article.title);
   const bodyText = cleanText(`${article.contentSnippet || ""} ${article.content || ""}`);
   const combinedText = `${titleText} ${bodyText}`;
-
-  const normalizedTitle = normalizeForKeywordMatch(titleText);
-  const normalizedBody = normalizeForKeywordMatch(bodyText);
   const normalizedAll = normalizeForKeywordMatch(combinedText);
 
-  const categoryScores = scoreCategories(normalizedTitle, normalizedBody, article.source);
-  const { category, score: categoryScore } = pickCategory(categoryScores);
-  const categoryStrongHits = categoryScores[category].strongHits;
+  const hasPolitics = hasAnyKeyword(normalizedAll, POLITICS_KEYWORDS);
+  const isHardNegative = hasAnyKeyword(normalizedAll, HARD_NEGATIVE_KEYWORDS);
+  const hasVehicle = hasAnyKeyword(normalizedAll, VEHICLE_KEYWORDS);
+  const hasMusk = hasAnyKeyword(normalizedAll, MUSK_ALLOWLIST);
+  const isNonMuskVehicle = hasVehicle && !hasMusk;
+  const hasCouponCodePromo = hasCouponContext(combinedText);
 
-  const politicsHits = scorePolitics(normalizedAll);
-  const { hard: hardNegHits, soft: softNegHits } = scoreNegativity(normalizedAll);
-  const { isNonMuskVehicle } = scoreVehicles(normalizedAll);
-  // Only boost when Musk/Tesla/SpaceX is the subject of the article (title).
-  // Body mentions are too often incidental (e.g. Home Assistant release
-  // notes mentioning a Tesla integration once or twice).
-  const muskTitleHits = countKeywordHits(normalizedTitle, KEYWORDS.muskAllowlist);
-  const muskBodyHits = countKeywordHits(normalizedBody, KEYWORDS.muskAllowlist);
-  // Title-only context to avoid boosting articles that merely mention
-  // "Tesla integration" once in passing (e.g. Home Assistant release notes).
-  const hasMuskContext = muskTitleHits > 0;
-  const muskBoostUnits = muskTitleHits;
-  // Radio / shortwave / amateur boost so dedicated hobby content surfaces.
-  const radioStrongKeywords = [
-    "ham radio",
-    "amateur radio",
-    "shortwave radio",
-    "shortwave listening",
-    "shortwave broadcast",
-    "shortwave receiver",
-    "shortwave transmitter",
-    "shortwave antenna",
-    "software defined radio",
-    "qsl card",
-    "numbers station",
-    "pirate radio",
-    "wwv time signal",
-  ];
-  const radioWeakKeywords = ["shortwave", "swl", "hf radio", "qsl", "sdr", "qrp", "transceiver", "hamfest"];
-  const radioStrongHits =
-    countKeywordHits(normalizedTitle, radioStrongKeywords) * 2 +
-    countKeywordHits(normalizedBody, radioStrongKeywords);
-  const radioWeakHits =
-    countKeywordHits(normalizedTitle, radioWeakKeywords) +
-    (countKeywordHits(normalizedBody, radioWeakKeywords) > 0 ? 1 : 0);
-  const radioBoostUnits = radioStrongHits > 0 ? radioStrongHits + Math.min(radioWeakHits, 2) : 0;
-  const hasCouponCodePromo = hasCouponCodeContext(combinedText);
-
-  const sentimentResult = sentiment.analyze(combinedText);
-  const positivityScore = scorePositivity(
-    normalizedAll,
-    sentimentResult.comparative,
-    tuning,
-    softNegHits,
-    categoryStrongHits
-  );
-
-  // Strong category match bypasses the positivity threshold so factual /
-  // tutorial / troubleshooting articles in our interest areas still surface
-  // even when their tone is neutral. Triggered when an article is clearly
-  // about one of our categories.
-  const isStrongCategoryMatch = categoryStrongHits >= 1 && categoryScore >= 6;
-  // Maker / Android / AI tutorials are often dry but on-topic — let any
-  // article with a high category score through.
-  const isClearCategoryHit = category !== "general" && categoryScore >= 9;
-  // Cybersecurity / cyber-attack stories live in `tech` and are flagged as
-  // "soft negative" by words like "attack" or "breach" — keep them when the
-  // article is clearly about tech.
-  const isCyberContext = category === "general" && categoryScore >= 6 && hardNegHits === 0;
-  const isPositive =
-    positivityScore > tuning.positivityThreshold ||
-    isStrongCategoryMatch ||
-    isClearCategoryHit ||
-    isCyberContext ||
-    hasMuskContext;
-
-  const aiHits = categoryScores.ai.strongHits + categoryScores.ai.weakHits;
-  const rankScore =
-    aiHits * tuning.aiWeight +
-    positivityScore +
-    Math.min(categoryScore, 30) * 0.05 +
-    Math.min(muskBoostUnits, 4) * 1.5 +
-    Math.min(radioBoostUnits, 6) * 2.0;
+  // Recency-based ranking. More recent → higher rank score. Articles with
+  // no pubDate fall to the bottom.
+  const ts = article.pubDate ? new Date(article.pubDate).getTime() : 0;
+  const rankScore = Number.isFinite(ts) ? ts : 0;
 
   return {
     ...article,
-    category,
-    categoryScore,
-    categoryStrongHits,
-    aiScore: aiHits,
-    politicsHits,
-    hasPolitics: politicsHits > 0,
-    hardNegHits,
-    softNegHits,
-    isHardNegative: hardNegHits > 0,
+    // Default category to "general" if the source feed didn't supply one.
+    category: article.category || "general",
+    hasPolitics,
+    isHardNegative,
     isNonMuskVehicle,
     hasCouponCodePromo,
-    positivityScore,
-    isPositive,
-    rankScore,
-    sentimentScore: sentimentResult.score
+    rankScore
   };
 }
 
-function analyzeAndFilterArticles(articles, tuningInput = DEFAULT_TUNING) {
-  const tuning = normalizeTuning(tuningInput);
-
+function analyzeAndFilterArticles(articles, _tuningInput = DEFAULT_TUNING) {
   return articles
-    .map((article) => scoreArticle(article, tuning))
+    .map((article) => scoreArticle(article))
     .filter((article) => !article.hasCouponCodePromo)
     .filter((article) => !article.hasPolitics)
     .filter((article) => !article.isHardNegative)
     .filter((article) => !article.isNonMuskVehicle)
-    .sort((a, b) => {
-      if (b.rankScore !== a.rankScore) return b.rankScore - a.rankScore;
-      if (b.aiScore !== a.aiScore) return b.aiScore - a.aiScore;
-      if (b.positivityScore !== a.positivityScore) return b.positivityScore - a.positivityScore;
-      return new Date(b.pubDate || 0) - new Date(a.pubDate || 0);
-    });
+    .sort((a, b) => b.rankScore - a.rankScore);
 }
 
 module.exports = {

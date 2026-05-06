@@ -370,6 +370,22 @@ h1 {
   background: rgba(255, 125, 125, 0.22);
 }
 
+.feed-category-select {
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.75rem;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+.feed-category-select:focus {
+  outline: 1px solid var(--accent-2);
+}
+
 @keyframes intro {
   from {
     opacity: 0;

@@ -16,6 +16,7 @@ const feedsStatus = document.getElementById("feedsStatus");
 const addFeedForm = document.getElementById("addFeedForm");
 const feedLabelInput = document.getElementById("feedLabelInput");
 const feedUrlInput = document.getElementById("feedUrlInput");
+const feedCategoryInput = document.getElementById("feedCategoryInput");
 const maxTotalForm = document.getElementById("maxTotalForm");
 const maxTotalInput = document.getElementById("maxTotalInput");
 const maxTotalHint = document.getElementById("maxTotalHint");
@@ -102,13 +103,33 @@ function showFeedsView(show) {
   if (show) loadFeeds();
 }
 
+let availableCategories = [
+  "science", "ai", "maker", "gaming", "android", "tech",
+  "radio", "green", "birding", "weather", "general"
+];
+
+function populateCategorySelect(select, selected) {
+  select.innerHTML = "";
+  availableCategories.forEach((cat) => {
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    if (cat === selected) opt.selected = true;
+    select.append(opt);
+  });
+}
+
 async function loadFeeds() {
   feedsStatus.textContent = "Loading feeds...";
   feedsList.innerHTML = "";
   try {
     const response = await fetch("/api/feeds");
     if (!response.ok) throw new Error(`Status ${response.status}`);
-    const { feeds = [], maxTotalArticles, maxTotalArticlesRange } = await response.json();
+    const { feeds = [], categories, maxTotalArticles, maxTotalArticlesRange } = await response.json();
+    if (Array.isArray(categories) && categories.length > 0) {
+      availableCategories = categories;
+    }
+    populateCategorySelect(feedCategoryInput, "general");
     feedsStatus.textContent = `${feeds.length} feeds configured`;
 
     if (maxTotalArticlesRange) {
@@ -138,13 +159,19 @@ async function loadFeeds() {
       url.rel = "noopener noreferrer";
       info.append(label, url);
 
+      const categorySelect = document.createElement("select");
+      categorySelect.className = "feed-category-select";
+      categorySelect.setAttribute("aria-label", `Category for ${feed.label}`);
+      populateCategorySelect(categorySelect, feed.category || "general");
+      categorySelect.addEventListener("change", () => updateFeedCategory(feed, categorySelect.value));
+
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
       removeBtn.className = "remove-btn";
       removeBtn.textContent = "Remove";
       removeBtn.addEventListener("click", () => removeFeed(feed));
 
-      li.append(info, removeBtn);
+      li.append(info, categorySelect, removeBtn);
       feedsList.append(li);
     });
   } catch (error) {
@@ -169,10 +196,31 @@ async function removeFeed(feed) {
   }
 }
 
+async function updateFeedCategory(feed, category) {
+  feedsStatus.textContent = `Updating category for ${feed.label}...`;
+  try {
+    const response = await fetch(`/api/feeds/${feed.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category })
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `Status ${response.status}`);
+    }
+    feedsStatus.textContent = `Updated ${feed.label} → ${category}`;
+    feed.category = category;
+    loadArticles().catch(() => {});
+  } catch (error) {
+    feedsStatus.textContent = `Failed to update: ${error.message}`;
+  }
+}
+
 addFeedForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const label = feedLabelInput.value.trim();
   const url = feedUrlInput.value.trim();
+  const category = feedCategoryInput ? feedCategoryInput.value : "general";
   if (!label || !url) return;
 
   feedsStatus.textContent = "Adding feed...";
@@ -180,7 +228,7 @@ addFeedForm.addEventListener("submit", async (event) => {
     const response = await fetch("/api/feeds", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label, url })
+      body: JSON.stringify({ label, url, category })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
