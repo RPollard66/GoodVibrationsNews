@@ -1,107 +1,168 @@
 # Good Vibrations News
 
-Responsive dark-mode web app that aggregates free RSS feeds, analyzes article sentiment, filters for uplifting stories, and prioritizes AI coverage.
+A self-hosted, dark-mode news reader that aggregates RSS feeds from positive,
+hands-on, and curiosity-driven sources — science, AI, makers, gaming, Android,
+tech, ham radio, green tech, birding, weather, and good news — and filters out
+the noise (politics, doom, coupon spam) so what's left is genuinely worth
+reading.
+
+You run it on your own machine (or a Raspberry Pi), point your browser at it,
+and it stays fresh on its own.
 
 ## Features
 
-- Free RSS feed aggregation across uplifting, tech, and gaming sources
-- AI-first ranking: stories with AI relevance appear first
-- Positive sentiment filtering with keyword scoring + sentiment analysis
-- Hourly background refresh with in-memory caching
-- SQLite persistence for settings and last successful article snapshot
-- Per-feed exponential backoff to reduce retry pressure when feeds fail/rate-limit
-- Manual refresh endpoint and UI button
-- UI sliders for live scoring control and immediate recompute
-- Mobile-friendly dark mode interface
+- **~99 curated RSS feeds** out of the box, each tagged with a category
+- **Source-based categorization** — every feed declares its own topic, so
+  articles aren't guessed at by keyword classifiers
+- **11 topic filters** in the UI: Science, AI, Maker, Gaming, Android, Tech,
+  Radio, Green, Birding, Weather, General. Empty filters auto-hide.
+- **Tune topics** panel — per-category weight (Off / Less / Normal / More) and
+  per-category minimum slot guarantee, without forced quotas
+- **Per-feed cap slider** — control how many items each feed contributes to the
+  rank pool (lower = more diversity, higher = more depth from each source)
+- **Exclusion filters** — politics, hard-negative news, non-Tesla/SpaceX vehicle
+  spam, and coupon-code promos are stripped out
+- **Manage feeds in the UI** — add, remove, or recategorize any feed at runtime
+- **Hourly auto-refresh** with a manual "Refresh now" button
+- **SQLite persistence** for feeds, settings, and last article snapshot
+- **Per-feed exponential backoff** so flaky feeds don't slow everything down
+- **Mobile-friendly** responsive layout
 
-## Run locally
+## Run locally (no Docker)
 
-1. Install dependencies:
+Requires [Node.js](https://nodejs.org/) 18 or newer.
 
 ```bash
 npm install
-```
-
-2. Start the server:
-
-```bash
 npm start
 ```
 
-3. Open in browser:
+Open `http://localhost:4000` in your browser. The server listens on `0.0.0.0`
+so other devices on your home network can reach it at
+`http://YOUR_LAN_IP:4000` if your firewall allows.
 
-- Local machine: `http://localhost:4000`
-- Home network devices: `http://YOUR_PC_LAN_IP:4000`
+## Run with Docker (recommended)
 
-The server listens on `0.0.0.0` by default so devices on your home network can reach it (if firewall rules allow it).
+This is the easiest way to run Good Vibrations News on a Raspberry Pi, NAS,
+home server, or any always-on machine. The container clones the latest code
+from this repo on every start, so you stay up to date with no manual git
+work, and a Watchtower sidecar keeps the base Node image current.
 
-## API
+### 1. Install Docker
 
-- `GET /api/articles` -> return cached/analyzed articles
-- `POST /api/refresh` -> force immediate feed refresh
-- `GET /api/settings` -> return scoring settings
-- `POST /api/settings` -> update scoring settings and recompute results
-- `GET /api/health` -> service health
-- `GET /api/debug/categories` -> category diagnostics (supports `q` and `limit` query params)
+Pick the section for your operating system. You only need to do this once.
 
-## Notes
-
-- RSS providers may occasionally block requests or rate limit; feed health is shown in the UI.
-- A failed feed gets temporary exponential backoff before retrying.
-- Default schedule refreshes every hour (`60 * 60 * 1000` ms).
-- Filtering is heuristic; tune keyword lists in `src/analyzer.js` for your preferences.
-- SQLite database file is stored at `data/good-vibrations.db`.
-
-## Run via Docker (Raspberry Pi or any Docker host)
-
-The included `compose.yaml` pulls the latest code from the `main` branch of this repo every time the container starts, so it is always up to date without any manual git operations on the host.
-
-### Prerequisites
-
-- Docker and Docker Compose (v2) installed on the host
+#### Linux (Raspberry Pi, Debian, Ubuntu, Fedora, Arch, etc.)
 
 ```bash
-# Raspberry Pi / Debian-based
 curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER   # allow running docker without sudo (re-login after)
+sudo usermod -aG docker $USER
 ```
 
-### First-time setup
+Log out and back in (or reboot) so the group change takes effect. Verify:
 
 ```bash
-mkdir ~/good-vibrations-news
-cd ~/good-vibrations-news
+docker --version
+docker compose version
+```
+
+#### macOS
+
+1. Download **Docker Desktop for Mac** from <https://www.docker.com/products/docker-desktop/>
+   (choose Apple Silicon or Intel as appropriate).
+2. Open the `.dmg`, drag Docker to Applications, and launch it.
+3. Wait for the whale icon in the menu bar to stop animating.
+4. Verify in Terminal:
+
+   ```bash
+   docker --version
+   docker compose version
+   ```
+
+#### Windows 10 / 11
+
+1. Make sure WSL 2 is enabled. From an admin PowerShell:
+
+   ```powershell
+   wsl --install
+   ```
+
+   Reboot if prompted.
+2. Download **Docker Desktop for Windows** from <https://www.docker.com/products/docker-desktop/>
+   and run the installer. Accept the WSL 2 backend option.
+3. Launch Docker Desktop and wait for it to start.
+4. Verify in PowerShell or Windows Terminal:
+
+   ```powershell
+   docker --version
+   docker compose version
+   ```
+
+> **Tip for Windows users:** run all the commands below from a WSL 2 shell
+> (Ubuntu, Debian, etc.) for the smoothest experience. PowerShell works too,
+> but file paths and `curl` flags differ.
+
+### 2. Get the Compose file and start the app
+
+```bash
+mkdir good-vibrations-news
+cd good-vibrations-news
 curl -O https://raw.githubusercontent.com/RPollard66/GoodVibrationsNews/main/compose.yaml
 docker compose up -d
 ```
 
-This will:
-1. Pull the latest `node:current-bookworm-slim` image
-2. Clone this repo inside the container
-3. Run `npm ci` and start the server on port **4000**
-4. Start a Watchtower sidecar that checks every 5 minutes for updated Node images
+On Windows PowerShell replace the `curl -O` line with:
 
-### Access the app
+```powershell
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/RPollard66/GoodVibrationsNews/main/compose.yaml -OutFile compose.yaml
+```
 
-- `http://<pi-ip-address>:4000`
+What happens on first start:
 
-### Common operations
+1. Docker pulls the `node:current-bookworm-slim` base image.
+2. The container clones this repo into a Docker volume.
+3. `npm ci --omit=dev` installs dependencies.
+4. `node server.js` starts the app on port **4000**.
+5. The Watchtower sidecar begins checking every 5 minutes for an updated Node
+   image.
+
+The first start can take a few minutes (image download + npm install). Watch
+progress with `docker compose logs -f good-vibrations-news`.
+
+### 3. Open the app
+
+- Same machine: <http://localhost:4000>
+- Another device on your network: `http://<host-ip-address>:4000`
+
+To find your host's LAN IP:
+
+| OS                | Command                                |
+| ----------------- | -------------------------------------- |
+| Linux / macOS     | `ip addr` or `ifconfig`                |
+| Windows (PS)      | `ipconfig`                             |
+| Raspberry Pi OS   | `hostname -I`                          |
+
+### Common Docker operations
 
 ```bash
-# View logs
+# Show logs
 docker compose logs -f good-vibrations-news
 
 # Stop
 docker compose down
 
-# Restart (also pulls latest code from GitHub)
+# Restart (this also pulls latest code from GitHub)
 docker compose restart good-vibrations-news
 
-# Force full rebuild with latest code and Node image
+# Force a full rebuild with latest code AND latest Node image
 docker compose pull && docker compose up -d --force-recreate
+
+# Update Compose file itself if it changes upstream
+curl -O https://raw.githubusercontent.com/RPollard66/GoodVibrationsNews/main/compose.yaml
+docker compose up -d
 ```
 
-### Optional: change port
+### Change the port
 
 Create a `.env` file next to `compose.yaml`:
 
@@ -109,44 +170,72 @@ Create a `.env` file next to `compose.yaml`:
 PORT=8080
 ```
 
-Then restart: `docker compose up -d`
+Then `docker compose up -d` to apply.
 
 ### Data persistence
 
-Article cache and settings are stored in a Docker volume (`goodvibrationsnews_app_data`) and survive container restarts and image updates.
-
----
-
-## Auto-start on boot (systemd)
-
-This project includes a service file at `good-vibrations-news.service` that can be installed to systemd.
-
-- Start service now:
+The SQLite database, settings, and snapshots live in a Docker volume named
+`<project>_app_data` (the project prefix matches the folder containing your
+`compose.yaml`). The volume survives container restarts, image updates, and
+code refreshes. To reset everything to defaults:
 
 ```bash
-sudo systemctl start good-vibrations-news.service
+docker compose down
+docker volume rm <project>_app_data
+docker compose up -d
 ```
 
-- Stop service:
+## API
+
+Mostly internal, but useful for scripting:
+
+- `GET /api/articles` — current cached/analyzed article list
+- `POST /api/refresh` — force an immediate refresh
+- `GET /api/feeds` — list feeds + categories + current settings
+- `POST /api/feeds` — add a feed (`{ label, url, category }`)
+- `PATCH /api/feeds/:id` — change a feed's category (`{ category }`)
+- `DELETE /api/feeds/:id` — remove a feed
+- `POST /api/settings/max-total-articles` — `{ value }`
+- `POST /api/settings/per-feed-cap` — `{ value }`, 3–15
+- `POST /api/settings/category-weights` — `{ weights: { science: "more", ... } }`
+- `POST /api/settings/category-minimums` — `{ minimums: { radio: 2, ... } }`
+- `GET /api/health` — service health check
+
+## How filtering and ranking work
+
+1. Each feed is fetched in parallel; per-feed exponential backoff on errors.
+2. The first N items per feed (per-feed cap, default 8) enter the rank pool.
+3. Articles are filtered to drop politics, hard-negative news, non-Musk
+   vehicles, and coupon-code promos.
+4. Survivors are ranked by `pubDate` (recency).
+5. User category weights multiply each article's rank score
+   (Off = 0, Less = 0.5, Normal = 1.0, More = 2.0).
+6. Per-category minimums reserve top slots for chosen categories before the
+   rest of the top-N is filled by recency.
+7. The final list is re-sorted by date for display.
+
+Categorization comes from the feed itself (defined in source), not from
+keyword classifiers or AI sentiment scoring.
+
+## Auto-start on boot (Linux + systemd, no Docker)
+
+If you'd rather run the Node app directly under systemd instead of Docker, a
+service file is included.
 
 ```bash
-sudo systemctl stop good-vibrations-news.service
-```
-
-- Restart service:
-
-```bash
-sudo systemctl restart good-vibrations-news.service
-```
-
-- Check status:
-
-```bash
+sudo cp good-vibrations-news.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now good-vibrations-news.service
 sudo systemctl status good-vibrations-news.service
 ```
 
-- Enable at boot:
+Edit the service file first if your install path differs from the default.
 
-```bash
-sudo systemctl enable good-vibrations-news.service
-```
+## Notes
+
+- RSS providers occasionally rate-limit or block requests. Failing feeds back
+  off and retry automatically; per-feed status is visible in the API
+  response.
+- The default refresh interval is 1 hour.
+- The SQLite file lives at `data/good-vibrations.db` (or inside the
+  `app_data` volume in Docker).
