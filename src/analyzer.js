@@ -1,6 +1,6 @@
 // Article filtering & ranking.
 //
-// New (May 2026) design: keep things simple.
+// Design (May 2026, updated Aug 2026):
 //
 //  1. Articles inherit their category from their source feed (set in
 //     defaultFeeds.js / the feeds DB column). We do NOT keyword-classify.
@@ -9,9 +9,11 @@
 //       - hard-negative news (war / death / disaster / serious crime)
 //       - non-Musk vehicle / auto-industry coverage
 //       - coupon-code promo posts
-//  3. Surviving articles are ranked by recency. No sentiment analysis,
-//     no per-category weights, no AI multiplier. The user explicitly asked
-//     for a flat playing field across categories.
+//       - product reviews / buying guides / affiliate & sponsored content
+//  3. Surviving articles are ranked by recency, with a fixed AI boost:
+//     articles from the ai-category feeds, or that mention AI topics
+//     multiple times, rank as if they were 48 hours fresher. This makes
+//     them preferentially survive the max-articles trim in feedService.
 //
 // `tuning` is kept for back-compat with the existing settings UI/storage
 // but is no longer consulted by the filter — the only tunable behaviour is
@@ -136,6 +138,77 @@ const COUPON_PATTERNS = [
   /\bfree\s+shipping\b/
 ];
 
+// Promotional / affiliate / product-review content. These articles exist to
+// sell things (or drive affiliate revenue) rather than inform, so we drop
+// them wholesale.
+const PROMOTIONAL_KEYWORDS = [
+  // Product reviews
+  "hands-on review", "hands on review", "our review of",
+  "long-term review", "long term review", "in-depth review",
+  "should you buy", "worth buying", "worth the money",
+  "is it worth it", "should you upgrade", "should i buy",
+  // Buying guides / listicles
+  "buying guide", "buyer's guide", "buyers guide",
+  "gift guide", "holiday gift guide", "best budget",
+  "best cheap", "best value", "top picks",
+  "best deals on", "best deals of", "best of the deals",
+  // Sales / promotions
+  "prime day deal", "prime day deals", "amazon prime day",
+  "black friday deal", "black friday deals",
+  "cyber monday deal", "cyber monday deals",
+  "deal alert", "hot deal", "hottest deals",
+  "biggest sale", "on sale for", "flash sale",
+  "limited time offer", "shop the sale", "shop now",
+  "discounted to", "marked down to",
+  // Affiliate / sponsored
+  "affiliate link", "affiliate links", "sponsored post",
+  "sponsored content", "sponsored by",
+  "in partnership with", "brought to you by",
+  "paid promotion", "we may earn a commission",
+  "earn a commission", "commission from purchases"
+];
+
+// AI-content keywords used to grant a rank-score boost so AI stories
+// preferentially survive when feedService trims to the max-articles cap.
+// Two or more hits (or an ai-category source feed) triggers the boost.
+const AI_BOOST_KEYWORDS = [
+  // Core AI concepts
+  "artificial intelligence", "machine learning", "deep learning",
+  "neural network", "neural networks",
+  // LLMs and models
+  "large language model", "large language models",
+  "llm", "llms", "foundation model", "foundation models",
+  "generative ai", "gen ai", "generative model",
+  "diffusion model", "transformer model",
+  // Named products / companies
+  "chatgpt", "gpt-4", "gpt-5", "gpt-6",
+  "openai", "anthropic", "claude ai", "anthropic claude",
+  "google gemini", "gemini pro", "gemini ultra",
+  "llama model", "llama 3", "llama 4", "llama 5",
+  "mistral ai", "hugging face", "deepseek",
+  "stable diffusion", "midjourney", "dall-e", "sora ai",
+  "grok ai", "xai grok",
+  // Techniques
+  "reinforcement learning", "computer vision",
+  "natural language processing",
+  "text-to-image", "text to image",
+  "text-to-video", "text to video",
+  "speech recognition", "speech synthesis",
+  // Adjacent
+  "ai agent", "ai agents", "ai assistant", "ai chatbot",
+  "ai model", "ai models", "ai research",
+  "ai safety", "ai alignment", "ai regulation",
+  "ai startup", "ai company", "ai training",
+  "prompt engineering",
+  // Toolchain
+  "pytorch", "tensorflow", "jax framework"
+];
+
+// Boost equivalent to 48 hours of freshness. Enough to make an AI article
+// clearly beat a similarly-recent non-AI article at the trim step, without
+// letting stale AI articles outrank fresh coverage of other topics.
+const AI_BOOST_MS = 48 * 60 * 60 * 1000;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -210,20 +283,30 @@ function scoreArticle(article) {
   const hasMusk = hasAnyKeyword(normalizedAll, MUSK_ALLOWLIST);
   const isNonMuskVehicle = hasVehicle && !hasMusk;
   const hasCouponCodePromo = hasCouponContext(combinedText);
+  const isPromotional = hasAnyKeyword(normalizedAll, PROMOTIONAL_KEYWORDS);
 
-  // Recency-based ranking. More recent → higher rank score. Articles with
-  // no pubDate fall to the bottom.
+  // Base rank is the pubDate timestamp. More recent → higher score.
   const ts = article.pubDate ? new Date(article.pubDate).getTime() : 0;
-  const rankScore = Number.isFinite(ts) ? ts : 0;
+  const baseTs = Number.isFinite(ts) ? ts : 0;
+
+  // AI boost: an ai-category feed OR two+ AI keyword hits earns a fixed
+  // 48-hour freshness bump, so AI stories preferentially survive the
+  // max-articles trim in feedService.
+  const category = article.category || "general";
+  const aiSignalHits = countKeywordHits(normalizedAll, AI_BOOST_KEYWORDS);
+  const isAiArticle = category === "ai" || aiSignalHits >= 2;
+  const rankScore = baseTs + (isAiArticle ? AI_BOOST_MS : 0);
 
   return {
     ...article,
     // Default category to "general" if the source feed didn't supply one.
-    category: article.category || "general",
+    category,
     hasPolitics,
     isHardNegative,
     isNonMuskVehicle,
     hasCouponCodePromo,
+    isPromotional,
+    isAiArticle,
     rankScore
   };
 }
@@ -232,6 +315,7 @@ function analyzeAndFilterArticles(articles, _tuningInput = DEFAULT_TUNING) {
   return articles
     .map((article) => scoreArticle(article))
     .filter((article) => !article.hasCouponCodePromo)
+    .filter((article) => !article.isPromotional)
     .filter((article) => !article.hasPolitics)
     .filter((article) => !article.isHardNegative)
     .filter((article) => !article.isNonMuskVehicle)
