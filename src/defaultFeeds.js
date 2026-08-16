@@ -3,7 +3,7 @@
 //
 // Each feed declares its category. The article's category is inherited from
 // its source feed — we no longer try to keyword-classify individual articles.
-// Allowed categories: science, ai, maker, gaming, android, tech, radio,
+// Allowed categories: science, ai, maker, gaming, ios, apple, tech, radio,
 // green, birding, weather, general.
 const DEFAULT_FEEDS = [
   // Science
@@ -69,15 +69,21 @@ const DEFAULT_FEEDS = [
   { label: "GameSpot", url: "https://www.gamespot.com/feeds/mashup/", category: "gaming" },
   { label: "Eurogamer", url: "https://www.eurogamer.net/feed", category: "gaming" },
 
-  // Android
-  { label: "Android Authority", url: "https://www.androidauthority.com/feed/", category: "android" },
-  { label: "Android Police", url: "https://www.androidpolice.com/feed/", category: "android" },
-  { label: "9to5Google Android", url: "https://9to5google.com/guides/android/feed/", category: "android" },
-  { label: "Android Central", url: "https://www.androidcentral.com/rss.xml", category: "android" },
-  { label: "Android Headlines", url: "https://www.androidheadlines.com/feed/", category: "android" },
-  { label: "Droid Life", url: "https://www.droid-life.com/feed/", category: "android" },
-  { label: "Phandroid", url: "https://phandroid.com/feed/", category: "android" },
-  { label: "Talk Android", url: "https://www.talkandroid.com/feed/", category: "android" },
+  // Apple ecosystem (official + long-form editorial; ad-heavy “buying guide”
+  // sites like MacRumors / 9to5Mac / AppleInsider / iMore are intentionally
+  // excluded because they trigger the promotional-content filter frequently)
+  { label: "Apple Newsroom", url: "https://www.apple.com/newsroom/rss-feed.rss", category: "apple" },
+  { label: "Apple Developer News", url: "https://developer.apple.com/news/rss/news.rss", category: "apple" },
+  { label: "Apple Machine Learning Research", url: "https://machinelearning.apple.com/rss.xml", category: "apple" },
+  { label: "Swift Blog", url: "https://www.swift.org/atom.xml", category: "apple" },
+  { label: "Daring Fireball", url: "https://daringfireball.net/feeds/main", category: "apple" },
+  { label: "Six Colors", url: "https://sixcolors.com/feed/", category: "apple" },
+  { label: "Michael Tsai", url: "https://mjtsai.com/blog/feed/", category: "apple" },
+  { label: "The Eclectic Light Company", url: "https://eclecticlight.co/feed/", category: "apple" },
+  { label: "Panic Blog", url: "https://panic.com/blog/feed/", category: "apple" },
+
+  // iOS-specific
+  { label: "iOS Dev Weekly", url: "https://iosdevweekly.com/issues.rss", category: "ios" },
 
   // Tech (general tech / engineering / homelab / self-hosted)
   { label: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/index", category: "tech" },
@@ -86,8 +92,6 @@ const DEFAULT_FEEDS = [
   { label: "TechCrunch", url: "https://techcrunch.com/feed/", category: "tech" },
   { label: "Product Hunt", url: "http://www.producthunt.com/feed", category: "tech" },
   { label: "Hacker News", url: "http://news.ycombinator.com/rss", category: "tech" },
-  { label: "SlashGear", url: "https://www.slashgear.com/feed", category: "tech" },
-  { label: "Stripe Blog", url: "https://stripe.com/blog/feed.rss", category: "tech" },
   { label: "GitHub Engineering", url: "http://githubengineering.com/atom.xml", category: "tech" },
   { label: "Cloudflare Blog", url: "https://blog.cloudflare.com/rss/", category: "tech" },
   { label: "Dropbox Tech", url: "https://dropbox.tech/feed", category: "tech" },
@@ -112,10 +116,6 @@ const DEFAULT_FEEDS = [
   { label: "Hackaday Radio Hacks", url: "https://hackaday.com/category/radio-hacks/feed/", category: "radio" },
   { label: "QRPer", url: "https://qrper.com/feed/", category: "radio" },
 
-  // Green / EV / personal mobility
-  { label: "Electrek", url: "https://electrek.co/feed/", category: "green" },
-  { label: "Electric Bike Report", url: "https://www.electricbikereport.com/feed/", category: "green" },
-
   // Birding / ornithology
   { label: "Cornell Lab — All About Birds", url: "https://www.allaboutbirds.org/news/feed/", category: "birding" },
   { label: "Audubon", url: "https://www.audubon.org/rss.xml", category: "birding" },
@@ -133,7 +133,8 @@ const FEED_CATEGORIES = [
   "ai",
   "maker",
   "gaming",
-  "android",
+  "ios",
+  "apple",
   "tech",
   "radio",
   "green",

@@ -90,7 +90,55 @@ function ensureDb() {
     backfill(DEFAULT_FEEDS);
   }
 
+  // One-time migrations that seed new default feeds into already-populated
+  // databases. Each migration id runs at most once per DB. Guarded on a
+  // settings row so re-adding via UI, then deleting, is not undone.
+  runOneTimeMigrations(db, upsert, now);
+
   return db;
+}
+
+// Feed sources introduced after the initial seed. Keyed by a migration id so
+// we can add more waves in the future without re-inserting earlier ones.
+const FEED_MIGRATIONS = [
+  {
+    id: "2025-08-apple-ios-seed",
+    urls: [
+      "https://www.apple.com/newsroom/rss-feed.rss",
+      "https://developer.apple.com/news/rss/news.rss",
+      "https://machinelearning.apple.com/rss.xml",
+      "https://www.swift.org/atom.xml",
+      "https://daringfireball.net/feeds/main",
+      "https://sixcolors.com/feed/",
+      "https://mjtsai.com/blog/feed/",
+      "https://eclecticlight.co/feed/",
+      "https://panic.com/blog/feed/",
+      "https://iosdevweekly.com/issues.rss"
+    ]
+  }
+];
+
+function runOneTimeMigrations(db, upsert, now) {
+  const insertFeed = db.prepare(
+    "INSERT OR IGNORE INTO feeds (label, url, created_at, category) VALUES (?, ?, ?, ?)"
+  );
+  const feedByUrl = new Map(DEFAULT_FEEDS.map((f) => [f.url, f]));
+
+  for (const migration of FEED_MIGRATIONS) {
+    const key = `feedMigration.${migration.id}`;
+    const existing = db.prepare("SELECT value FROM settings WHERE key = ?").get(key);
+    if (existing) continue;
+
+    const tx = db.transaction(() => {
+      for (const url of migration.urls) {
+        const feed = feedByUrl.get(url);
+        if (!feed) continue;
+        insertFeed.run(feed.label, feed.url, now, normalizeCategory(feed.category));
+      }
+      upsert.run(key, now, now);
+    });
+    tx();
+  }
 }
 
 function getSettings() {

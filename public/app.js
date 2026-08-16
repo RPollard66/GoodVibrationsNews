@@ -143,7 +143,7 @@ function showFeedsView(show) {
 }
 
 let availableCategories = [
-  "science", "ai", "maker", "gaming", "android", "tech",
+  "science", "ai", "maker", "gaming", "ios", "apple", "tech",
   "radio", "green", "birding", "weather", "general"
 ];
 
