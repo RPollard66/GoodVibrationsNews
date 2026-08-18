@@ -1,6 +1,9 @@
 const express = require("express");
 const path = require("path");
 const { getCachedArticles, refreshArticles, invalidateCache } = require("./src/feedService");
+const { searchArticles } = require("./src/search");
+const { getArticleStats } = require("./src/articleStore");
+const { isConfigured: isEmbedderConfigured, OLLAMA_EMBED_MODEL } = require("./src/embedder");
 const {
   ensureDb,
   getFeeds,
@@ -43,6 +46,32 @@ app.get("/api/articles", async (_req, res) => {
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", service: "good-vibrations-news" });
+});
+
+app.get("/api/search", async (req, res) => {
+  try {
+    const q = String(req.query.q || "").trim();
+    const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 30));
+    const payload = await searchArticles(q, limit);
+    res.json(payload);
+  } catch (error) {
+    console.error("Search failed", error);
+    res.status(500).json({ error: "Search failed" });
+  }
+});
+
+app.get("/api/search/status", (_req, res) => {
+  try {
+    const stats = getArticleStats();
+    res.json({
+      semanticEnabled: isEmbedderConfigured(),
+      embedModel: OLLAMA_EMBED_MODEL,
+      articles: stats
+    });
+  } catch (error) {
+    console.error("Search status failed", error);
+    res.status(500).json({ error: "Search status failed" });
+  }
 });
 
 app.get("/api/feeds", (_req, res) => {

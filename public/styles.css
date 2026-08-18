@@ -340,6 +340,36 @@ h1 {
   border-color: rgba(88, 228, 167, 0.7);
 }
 
+.article-search-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.article-search {
+  width: 100%;
+  background: var(--bg-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.95rem;
+}
+
+.article-search:focus {
+  outline: none;
+  border-color: rgba(88, 228, 167, 0.7);
+}
+
+.article-search-status {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted, rgba(200, 210, 220, 0.65));
+  padding-left: 0.2rem;
+}
+
 .feed-item {
   display: flex;
   align-items: center;

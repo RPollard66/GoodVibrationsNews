@@ -2,7 +2,11 @@ const state = {
   allArticles: [],
   selectedFilter: "all",
   feeds: [],
-  feedSearch: ""
+  feedSearch: "",
+  articleSearch: "",
+  searchResults: [],
+  searchMode: "empty",
+  searchLoading: false
 };
 
 const articleContainer = document.getElementById("articles");
@@ -16,6 +20,8 @@ const refreshNowBtn = document.getElementById("refreshNowBtn");
 const feedsList = document.getElementById("feedsList");
 const feedsStatus = document.getElementById("feedsStatus");
 const feedSearchInput = document.getElementById("feedSearchInput");
+const articleSearchInput = document.getElementById("articleSearchInput");
+const articleSearchStatus = document.getElementById("articleSearchStatus");
 const addFeedForm = document.getElementById("addFeedForm");
 const feedLabelInput = document.getElementById("feedLabelInput");
 const feedUrlInput = document.getElementById("feedUrlInput");
@@ -68,12 +74,36 @@ function updateFilterChips() {
 function renderArticles() {
   articleContainer.innerHTML = "";
 
-  const visible = state.selectedFilter === "all"
-    ? state.allArticles
-    : state.allArticles.filter((article) => article.category === state.selectedFilter);
+  const hasSearch = state.articleSearch.trim().length > 0;
+  const filters = document.querySelector(".filters");
+  if (filters) filters.hidden = hasSearch;
 
-  updateFilterChips();
-  statusLine.textContent = `Showing ${visible.length} articles`;
+  let visible;
+  if (hasSearch) {
+    visible = state.searchResults.map((r) => ({
+      ...r,
+      contentSnippet: r.snippet || ""
+    }));
+  } else {
+    visible = state.selectedFilter === "all"
+      ? state.allArticles
+      : state.allArticles.filter((article) => article.category === state.selectedFilter);
+    updateFilterChips();
+  }
+
+  if (hasSearch) {
+    if (state.searchLoading) {
+      statusLine.textContent = `Searching for “${state.articleSearch}”…`;
+    } else if (visible.length === 0) {
+      statusLine.textContent = `No matches for “${state.articleSearch}”`;
+    } else if (state.searchMode === "semantic") {
+      statusLine.textContent = `Semantic search: ${visible.length} result${visible.length === 1 ? "" : "s"} for “${state.articleSearch}”`;
+    } else {
+      statusLine.textContent = `Keyword search: ${visible.length} result${visible.length === 1 ? "" : "s"} for “${state.articleSearch}”`;
+    }
+  } else {
+    statusLine.textContent = `Showing ${visible.length} articles`;
+  }
 
   visible.forEach((article) => {
     const clone = template.content.cloneNode(true);
@@ -130,6 +160,73 @@ document.querySelectorAll(".filter-chip").forEach((chip) => {
     renderArticles();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Article search (semantic when Ollama is up, keyword fallback otherwise)
+// ---------------------------------------------------------------------------
+
+let articleSearchTimer = null;
+let articleSearchSeq = 0;
+
+async function runArticleSearch(query) {
+  const seq = ++articleSearchSeq;
+  state.searchLoading = true;
+  renderArticles();
+
+  try {
+    const url = `/api/search?q=${encodeURIComponent(query)}&limit=40`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Search failed (${response.status})`);
+    const data = await response.json();
+    // Ignore late responses from stale queries.
+    if (seq !== articleSearchSeq) return;
+    state.searchResults = Array.isArray(data.results) ? data.results : [];
+    state.searchMode = data.mode || "keyword";
+  } catch (error) {
+    if (seq !== articleSearchSeq) return;
+    state.searchResults = [];
+    state.searchMode = "error";
+  } finally {
+    if (seq === articleSearchSeq) {
+      state.searchLoading = false;
+      renderArticles();
+    }
+  }
+}
+
+if (articleSearchInput) {
+  articleSearchInput.addEventListener("input", () => {
+    const value = articleSearchInput.value;
+    state.articleSearch = value;
+    clearTimeout(articleSearchTimer);
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      articleSearchSeq += 1; // cancel any in-flight search
+      state.searchResults = [];
+      state.searchMode = "empty";
+      state.searchLoading = false;
+      renderArticles();
+      return;
+    }
+
+    articleSearchTimer = setTimeout(() => runArticleSearch(trimmed), 300);
+  });
+}
+
+fetch("/api/search/status")
+  .then((r) => (r.ok ? r.json() : null))
+  .then((info) => {
+    if (!info || !articleSearchStatus) return;
+    const { semanticEnabled, articles } = info;
+    if (semanticEnabled) {
+      articleSearchStatus.textContent =
+        `Semantic search on — ${articles.embedded}/${articles.total} articles indexed`;
+    } else {
+      articleSearchStatus.textContent = "Semantic search off (keyword only)";
+    }
+  })
+  .catch(() => {});
 
 // ---------------------------------------------------------------------------
 // Feeds management

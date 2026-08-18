@@ -13,6 +13,28 @@ const {
   saveSnapshot,
   getLatestSnapshot
 } = require("./storage");
+const {
+  upsertArticles,
+  getUnembeddedArticles,
+  setEmbedding,
+  pruneOldArticles
+} = require("./articleStore");
+const { embed, isConfigured, OLLAMA_EMBED_MODEL } = require("./embedder");
+
+// Retention for the articles table (embeddings are the expensive thing to
+// recompute, but they're small enough that 60 days is comfortable).
+const ARTICLE_RETENTION_DAYS = Math.max(
+  7,
+  Number(process.env.ARTICLE_RETENTION_DAYS) || 60
+);
+
+// How many un-embedded articles to try per refresh cycle. On a fresh
+// install this drains the backlog gradually rather than hammering the
+// desktop with hundreds of requests all at once.
+const EMBED_BATCH_PER_REFRESH = Math.max(
+  1,
+  Number(process.env.EMBED_BATCH_PER_REFRESH) || 100
+);
 
 const parser = new Parser({
   timeout: 15000,
@@ -275,7 +297,45 @@ async function refreshArticles(force) {
 
   saveSnapshot(payload);
 
+  // Persist every ranked article (post-filter) into the articles table so
+  // search has something to work with. We use `analyzed` rather than
+  // `allArticles` on purpose: we don't want to embed promotional / political
+  // content we already dropped.
+  try {
+    upsertArticles(analyzed);
+    pruneOldArticles(ARTICLE_RETENTION_DAYS);
+  } catch (error) {
+    console.error("Article store upsert failed", error);
+  }
+
+  // Kick off background embedding. Fire-and-forget: if Ollama is down or
+  // slow we just try again on the next refresh, and search falls back to
+  // keyword mode in the meantime.
+  if (isConfigured()) {
+    embedPendingBatch(EMBED_BATCH_PER_REFRESH).catch((error) => {
+      console.error("Background embedding pass failed", error);
+    });
+  }
+
   return payload;
+}
+
+async function embedPendingBatch(maxPerRun) {
+  const rows = getUnembeddedArticles(maxPerRun);
+  let done = 0;
+  for (const row of rows) {
+    const text = `${row.title || ""}\n\n${row.snippet || ""}`.trim().slice(0, 4000);
+    if (!text) continue;
+    const vec = await embed(text);
+    if (!vec) {
+      // Ollama unreachable or errored. Bail out silently; the next
+      // refresh cycle will pick up where we left off.
+      return { done, aborted: true };
+    }
+    setEmbedding(row.link, vec, OLLAMA_EMBED_MODEL);
+    done += 1;
+  }
+  return { done, aborted: false };
 }
 
 async function getCachedArticles() {

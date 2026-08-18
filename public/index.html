@@ -35,6 +35,18 @@
       </header>
 
       <section id="newsView" class="app-view">
+        <section class="article-search-section" aria-label="Search articles">
+          <input
+            type="search"
+            id="articleSearchInput"
+            class="article-search"
+            placeholder="Search articles by meaning or keyword…"
+            aria-label="Search articles"
+            autocomplete="off"
+          />
+          <span id="articleSearchStatus" class="article-search-status"></span>
+        </section>
+
         <section class="filters" aria-label="Category filters">
           <button class="filter-chip active" data-filter="all">All</button>
           <button class="filter-chip" data-filter="science">Science</button>

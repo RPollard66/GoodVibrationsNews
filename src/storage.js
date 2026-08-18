@@ -45,6 +45,24 @@ function ensureDb() {
       created_at TEXT NOT NULL,
       category TEXT NOT NULL DEFAULT '${DEFAULT_FEED_CATEGORY}'
     );
+
+    CREATE TABLE IF NOT EXISTS articles (
+      link TEXT PRIMARY KEY,
+      source TEXT NOT NULL,
+      source_url TEXT,
+      category TEXT NOT NULL DEFAULT '${DEFAULT_FEED_CATEGORY}',
+      title TEXT NOT NULL,
+      snippet TEXT,
+      pub_date TEXT,
+      first_seen_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      embedding BLOB,
+      embedded_at TEXT,
+      embed_model TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_articles_last_seen ON articles(last_seen_at);
+    CREATE INDEX IF NOT EXISTS idx_articles_embedded_at ON articles(embedded_at);
   `);
 
   // Migration: add category column to pre-existing feeds tables.
