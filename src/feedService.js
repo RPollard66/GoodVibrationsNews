@@ -20,6 +20,7 @@ const {
   pruneOldArticles
 } = require("./articleStore");
 const { embed, isConfigured, OLLAMA_EMBED_MODEL } = require("./embedder");
+const { filterOutSemanticPromos } = require("./promoFilter");
 
 // Retention for the articles table (embeddings are the expensive thing to
 // recompute, but they're small enough that 60 days is comfortable).
@@ -270,10 +271,54 @@ async function refreshArticles(force) {
   const allArticles = settled.flatMap((entry) => entry.items);
   const feedStats = settled.map((entry) => entry.result);
 
-  // Rank, then apply user category controls (weights + soft minimums),
-  // then take top-N, then re-sort by date for display.
+  // Rank with the keyword-based analyzer first (drops politics, hard
+  // negatives, non-Musk vehicles, coupon-code promo, and the obvious
+  // "buying guide" / "prime day deal" phrasing).
   const ranked = analyzeAndFilterArticles(dedupeArticles(allArticles), settings);
-  const tuned = applyCategoryControls(ranked, categoryWeights, categoryMinimums, maxTotalArticles);
+
+  // Persist ranked articles before embedding so the store has stable IDs.
+  try {
+    upsertArticles(ranked);
+    pruneOldArticles(ARTICLE_RETENTION_DAYS);
+  } catch (error) {
+    console.error("Article store upsert failed", error);
+  }
+
+  // Drain pending embeddings synchronously (up to the batch cap) so the
+  // semantic promo filter below can act on this cycle's fresh articles.
+  // If Ollama is unreachable this returns quickly and the filter no-ops.
+  if (isConfigured()) {
+    try {
+      await embedPendingBatch(EMBED_BATCH_PER_REFRESH);
+    } catch (error) {
+      console.error("Foreground embedding pass failed", error);
+    }
+  }
+
+  // Semantic promotional filter: drop articles that look like ads / deals
+  // / product-review clickbait even when the keyword filter missed them.
+  let promoDroppedCount = 0;
+  let survivors = ranked;
+  try {
+    const { kept, dropped } = await filterOutSemanticPromos(ranked);
+    survivors = kept;
+    promoDroppedCount = dropped.length;
+    if (dropped.length > 0) {
+      console.log(
+        `Semantic promo filter dropped ${dropped.length} article(s):`,
+        dropped
+          .slice(0, 5)
+          .map((a) => `${a.semanticPromoScore.toFixed(2)} "${a.title}"`)
+          .join(" | ")
+      );
+    }
+  } catch (error) {
+    console.error("Semantic promo filter failed", error);
+  }
+
+  // Apply user category controls (weights + soft minimums), take top-N,
+  // then re-sort by date for display.
+  const tuned = applyCategoryControls(survivors, categoryWeights, categoryMinimums, maxTotalArticles);
 
   const analyzed = tuned.sort((a, b) => {
       const ta = a.pubDate ? new Date(a.pubDate).getTime() : 0;
@@ -292,30 +337,11 @@ async function refreshArticles(force) {
     articles: cache.articles,
     feedStats: cache.feedStats,
     settings: cache.settings,
+    semanticPromoDropped: promoDroppedCount,
     cached: false
   };
 
   saveSnapshot(payload);
-
-  // Persist every ranked article (post-filter) into the articles table so
-  // search has something to work with. We use `analyzed` rather than
-  // `allArticles` on purpose: we don't want to embed promotional / political
-  // content we already dropped.
-  try {
-    upsertArticles(analyzed);
-    pruneOldArticles(ARTICLE_RETENTION_DAYS);
-  } catch (error) {
-    console.error("Article store upsert failed", error);
-  }
-
-  // Kick off background embedding. Fire-and-forget: if Ollama is down or
-  // slow we just try again on the next refresh, and search falls back to
-  // keyword mode in the meantime.
-  if (isConfigured()) {
-    embedPendingBatch(EMBED_BATCH_PER_REFRESH).catch((error) => {
-      console.error("Background embedding pass failed", error);
-    });
-  }
 
   return payload;
 }
