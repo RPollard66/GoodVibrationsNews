@@ -10,6 +10,7 @@
 //       - non-Musk vehicle / auto-industry coverage
 //       - coupon-code promo posts
 //       - product reviews / buying guides / affiliate & sponsored content
+//       - Amazon consumer-device coverage (Echo, Fire TV, Kindle, Alexa)
 //  3. Surviving articles are ranked by recency, with a fixed AI boost:
 //     articles from the ai-category feeds, or that mention AI topics
 //     multiple times, rank as if they were 48 hours fresher. This makes
@@ -168,6 +169,24 @@ const PROMOTIONAL_KEYWORDS = [
   "earn a commission", "commission from purchases"
 ];
 
+// Amazon consumer devices — reader has no interest in these product
+// families, so drop any article that mentions them by name. Keywords are
+// deliberately compound ("amazon echo", "echo dot", …) rather than the
+// bare word "echo" to avoid false positives on everyday English.
+const AMAZON_DEVICE_KEYWORDS = [
+  // Echo smart speakers / displays
+  "amazon echo", "echo dot", "echo show", "echo studio",
+  "echo hub", "echo pop", "echo spot", "echo auto",
+  // Fire TV / Fire tablets
+  "fire tv", "fire stick", "fire tablet", "amazon fire",
+  "kindle fire",
+  // Kindle e-readers
+  "kindle", "kindle paperwhite", "kindle oasis",
+  "kindle scribe", "kindle colorsoft",
+  // Voice assistant
+  "alexa"
+];
+
 // AI-content keywords used to grant a rank-score boost so AI stories
 // preferentially survive when feedService trims to the max-articles cap.
 // Two or more hits (or an ai-category source feed) triggers the boost.
@@ -284,6 +303,7 @@ function scoreArticle(article) {
   const isNonMuskVehicle = hasVehicle && !hasMusk;
   const hasCouponCodePromo = hasCouponContext(combinedText);
   const isPromotional = hasAnyKeyword(normalizedAll, PROMOTIONAL_KEYWORDS);
+  const isAmazonDevice = hasAnyKeyword(normalizedAll, AMAZON_DEVICE_KEYWORDS);
 
   // Base rank is the pubDate timestamp. More recent → higher score.
   const ts = article.pubDate ? new Date(article.pubDate).getTime() : 0;
@@ -306,6 +326,7 @@ function scoreArticle(article) {
     isNonMuskVehicle,
     hasCouponCodePromo,
     isPromotional,
+    isAmazonDevice,
     isAiArticle,
     rankScore
   };
@@ -319,6 +340,7 @@ function analyzeAndFilterArticles(articles, _tuningInput = DEFAULT_TUNING) {
     .filter((article) => !article.hasPolitics)
     .filter((article) => !article.isHardNegative)
     .filter((article) => !article.isNonMuskVehicle)
+    .filter((article) => !article.isAmazonDevice)
     .sort((a, b) => b.rankScore - a.rankScore);
 }
 
